@@ -32,7 +32,7 @@ function SectionCard({ title, subtitle, children, onSave, saving, saved }) {
 export default function Perfil() {
   const { perfil, setPerfil } = useAuth()
 
-  const [personal, setPersonal]   = useState({ nombre: '', telefono: '' })
+  const [personal, setPersonal]   = useState({ nombre: '', apellido: '', telefono: '' })
   const [negocio, setNegocio]     = useState({
     nombre_negocio: '', ruc: '', telefono: '',
     direccion: '', ciudad: '', provincia: '', pais: 'Ecuador',
@@ -49,7 +49,7 @@ export default function Perfil() {
 
   useEffect(() => {
     if (!perfil) return
-    setPersonal({ nombre: perfil.nombre ?? '', telefono: perfil.telefono ?? '' })
+    setPersonal({ nombre: perfil.nombre ?? '', apellido: perfil.apellido ?? '', telefono: perfil.telefono ?? '' })
 
     supabase.from('clientes').select('*').eq('usuario_id', perfil.id).single()
       .then(({ data }) => {
@@ -76,11 +76,11 @@ export default function Perfil() {
     setSavingP(true); setErrorP(''); setSavedP(false)
     const { error } = await supabase
       .from('usuarios')
-      .update({ nombre: personal.nombre, telefono: personal.telefono || null })
+      .update({ nombre: personal.nombre, apellido: personal.apellido || null, telefono: personal.telefono || null })
       .eq('id', perfil.id)
     setSavingP(false)
     if (error) { setErrorP(error.message); return }
-    setPerfil(p => ({ ...p, nombre: personal.nombre, telefono: personal.telefono }))
+    setPerfil(p => ({ ...p, nombre: personal.nombre, apellido: personal.apellido, telefono: personal.telefono }))
     setSavedP(true)
     setTimeout(() => setSavedP(false), 3000)
   }
@@ -132,9 +132,13 @@ export default function Perfil() {
           saved={savedP}
         >
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 sm:col-span-1">
-              <label className={lbl}>Nombre completo *</label>
+            <div>
+              <label className={lbl}>Nombre *</label>
               <input name="nombre" value={personal.nombre} onChange={setP} className={inp} />
+            </div>
+            <div>
+              <label className={lbl}>Apellido</label>
+              <input name="apellido" value={personal.apellido} onChange={setP} className={inp} />
             </div>
             <div className="col-span-2 sm:col-span-1">
               <label className={lbl}>Teléfono personal</label>
