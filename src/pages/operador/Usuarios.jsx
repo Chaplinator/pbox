@@ -29,6 +29,7 @@ export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([])
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(null)
+  const [resetOk, setResetOk]   = useState(null)
 
   const esMaster = yo?.rol === 'master'
 
@@ -51,6 +52,16 @@ export default function Usuarios() {
     await supabase.from('usuarios').update({ rol: nuevoRol }).eq('id', usuario.id)
     setSaving(null)
     cargar()
+  }
+
+  async function resetPassword(usuario) {
+    if (!confirm(`Se enviará un correo de recuperación a ${usuario.email}. ¿Continuar?`)) return
+    setSaving(usuario.id)
+    const { error } = await supabase.auth.resetPasswordForEmail(usuario.email)
+    setSaving(null)
+    if (error) { alert(error.message); return }
+    setResetOk(usuario.id)
+    setTimeout(() => setResetOk(null), 4000)
   }
 
   async function toggleActivo(usuario) {
@@ -161,19 +172,34 @@ export default function Usuarios() {
                     <td className="px-4 py-3"><ActivoBadge activo={u.activo} /></td>
                     <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fecha}</td>
                     <td className="px-4 py-3">
-                      {esMaster && !esYoMismo && (
-                        <button
-                          onClick={() => toggleActivo(u)}
-                          disabled={isSaving}
-                          className={`px-2 py-1 text-xs rounded-md transition-colors disabled:opacity-50 ${
-                            u.activo
-                              ? 'text-red-500 hover:bg-red-50'
-                              : 'text-green-600 hover:bg-green-50'
-                          }`}
-                        >
-                          {u.activo ? 'Desactivar' : 'Activar'}
-                        </button>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {(esMaster || yo?.rol === 'operador') && !esYoMismo && (
+                          resetOk === u.id ? (
+                            <span className="text-xs text-green-600 font-medium">Correo enviado</span>
+                          ) : (
+                            <button
+                              onClick={() => resetPassword(u)}
+                              disabled={isSaving}
+                              className="text-xs text-brand-600 hover:underline disabled:opacity-50"
+                            >
+                              Resetear contraseña
+                            </button>
+                          )
+                        )}
+                        {esMaster && !esYoMismo && (
+                          <button
+                            onClick={() => toggleActivo(u)}
+                            disabled={isSaving}
+                            className={`px-2 py-1 text-xs rounded-md transition-colors disabled:opacity-50 ${
+                              u.activo
+                                ? 'text-red-500 hover:bg-red-50'
+                                : 'text-green-600 hover:bg-green-50'
+                            }`}
+                          >
+                            {u.activo ? 'Desactivar' : 'Activar'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )

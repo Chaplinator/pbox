@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/supabase/client'
+import { alertaStock } from '@/utils/alertas'
 
 const inp = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent'
 const lbl = 'block text-xs font-medium text-gray-600 mb-1'
@@ -147,6 +148,9 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
         referencias: dest.referencias_entrega     || null,
       })
     }
+
+    // Alerta de stock en background — no bloquea el flujo
+    alertaStock(clienteId)
 
     setSaving(false)
     onSaved()

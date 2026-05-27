@@ -14,6 +14,10 @@ export function AuthProvider({ children }) {
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') {
+        if (window.location.pathname !== '/recovery') window.location.href = '/recovery'
+        return
+      }
       setSession(session)
       if (session) fetchPerfil(session.user.id)
       else setPerfil(null)

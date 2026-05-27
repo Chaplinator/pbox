@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '@/supabase/client'
+import { alertaPedido } from '@/utils/alertas'
 
 const ESTADOS = {
   recibido:   { label: 'Recibido',   bg: 'bg-blue-100',   text: 'text-blue-700'   },
@@ -78,6 +79,7 @@ export default function ModalGestionPedido({ pedido, onClose, onActualizado }) {
       Object.assign(updates, despachoForm)
     }
 
+    const estadoAnterior = pedido.estado
     const { error } = await supabase
       .from('pedidos')
       .update(updates)
@@ -85,6 +87,10 @@ export default function ModalGestionPedido({ pedido, onClose, onActualizado }) {
 
     setSaving(false)
     if (error) { alert(error.message); return }
+
+    // Alerta de cambio de estado en background — no bloquea el flujo
+    alertaPedido(pedido.id, estadoAnterior, nuevoEstado)
+
     onActualizado()
   }
 

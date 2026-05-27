@@ -38,12 +38,15 @@ export default function Perfil() {
     direccion: '', ciudad: '', provincia: '', pais: 'Ecuador',
   })
   const [clienteId, setClienteId] = useState(null)
+  const [alertas, setAlertas]     = useState({ alerta_stock: true, alerta_pedidos: true })
   const [loading, setLoading]     = useState(true)
 
   const [savingP, setSavingP] = useState(false)
   const [savedP, setSavedP]   = useState(false)
   const [savingN, setSavingN] = useState(false)
   const [savedN, setSavedN]   = useState(false)
+  const [savingA, setSavingA] = useState(false)
+  const [savedA, setSavedA]   = useState(false)
   const [errorP, setErrorP]   = useState('')
   const [errorN, setErrorN]   = useState('')
 
@@ -63,6 +66,10 @@ export default function Perfil() {
             ciudad:         data.ciudad    ?? '',
             provincia:      data.provincia ?? '',
             pais:           data.pais      ?? 'Ecuador',
+          })
+          setAlertas({
+            alerta_stock:   data.alerta_stock   ?? true,
+            alerta_pedidos: data.alerta_pedidos ?? true,
           })
         }
         setLoading(false)
@@ -111,6 +118,19 @@ export default function Perfil() {
     if (error) { setErrorN(error.message); return }
     setSavedN(true)
     setTimeout(() => setSavedN(false), 3000)
+  }
+
+  async function guardarAlertas() {
+    if (!clienteId) return
+    setSavingA(true); setSavedA(false)
+    const { error } = await supabase
+      .from('clientes')
+      .update({ alerta_stock: alertas.alerta_stock, alerta_pedidos: alertas.alerta_pedidos })
+      .eq('id', clienteId)
+    setSavingA(false)
+    if (error) return
+    setSavedA(true)
+    setTimeout(() => setSavedA(false), 3000)
   }
 
   if (loading) return <div className="p-8 text-center text-gray-400 text-sm">Cargando…</div>
@@ -199,6 +219,36 @@ export default function Perfil() {
             </div>
           </div>
           {errorN && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-3">{errorN}</p>}
+        </SectionCard>
+
+        {/* Alertas */}
+        <SectionCard
+          title="Alertas por correo"
+          subtitle="Recibirás notificaciones en el correo de tu cuenta"
+          onSave={guardarAlertas}
+          saving={savingA}
+          saved={savedA}
+        >
+          <div className="space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={alertas.alerta_stock}
+                onChange={e => setAlertas(a => ({ ...a, alerta_stock: e.target.checked }))}
+                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
+              <div>
+                <p className="text-sm font-medium text-gray-800">Alerta de stock bajo</p>
+                <p className="text-xs text-gray-400">Te avisamos cuando algún producto baje del stock mínimo.</p>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={alertas.alerta_pedidos}
+                onChange={e => setAlertas(a => ({ ...a, alerta_pedidos: e.target.checked }))}
+                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
+              <div>
+                <p className="text-sm font-medium text-gray-800">Cambios de estado en pedidos</p>
+                <p className="text-xs text-gray-400">Te avisamos cada vez que un pedido cambie de estado.</p>
+              </div>
+            </label>
+          </div>
         </SectionCard>
       </div>
     </div>
