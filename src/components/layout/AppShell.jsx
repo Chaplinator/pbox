@@ -2,13 +2,15 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 
 const navCliente = [
-  { to: '/dashboard',  label: 'Dashboard'   },
   { to: '/inventario', label: 'Inventario'  },
   { to: '/pedidos',    label: 'Mis Pedidos' },
+  { to: '/perfil',     label: 'Mi Perfil'   },
 ]
 
 const navOperador = [
-  { to: '/operador', label: 'Panel Operativo' },
+  { to: '/operador',          label: 'Panel Operativo' },
+  { to: '/operador/reportes', label: 'Reportes'        },
+  { to: '/operador/usuarios', label: 'Usuarios'        },
 ]
 
 function NavSection({ items }) {
@@ -32,7 +34,7 @@ function NavSection({ items }) {
 export default function AppShell() {
   const { perfil, signOut } = useAuth()
   const navigate = useNavigate()
-  const esOperador = perfil?.rol === 'operador'
+  const esOperador = perfil?.rol === 'operador' || perfil?.rol === 'master'
 
   async function handleSignOut() {
     await signOut()

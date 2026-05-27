@@ -14,8 +14,11 @@ export default function ProtectedRoute({ requiredRol }) {
 
   if (!session) return <Navigate to="/login" replace />
 
-  if (requiredRol && perfil?.rol !== requiredRol) {
-    return <Navigate to="/dashboard" replace />
+  if (requiredRol) {
+    const rol = perfil?.rol
+    // master tiene acceso a todo; operador solo a rutas de operador
+    const permitido = rol === 'master' || rol === requiredRol
+    if (!permitido) return <Navigate to="/inventario" replace />
   }
 
   return <Outlet />

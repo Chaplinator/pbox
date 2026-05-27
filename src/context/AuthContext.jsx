@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
   const loading = session === undefined
 
   return (
-    <AuthContext.Provider value={{ session, perfil, loading, signOut }}>
+    <AuthContext.Provider value={{ session, perfil, setPerfil, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   )

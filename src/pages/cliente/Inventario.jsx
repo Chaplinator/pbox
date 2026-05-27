@@ -8,6 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie,
 } from 'recharts'
+import { exportarInventario } from '@/utils/exportExcel'
 
 const COLORS = ['#1e3a5f','#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#a5b4fc','#bae6fd']
 
@@ -103,12 +104,22 @@ export default function Inventario() {
           <h1 className="text-2xl font-bold text-gray-900">Inventario</h1>
           <p className="text-gray-500 text-sm">Productos y stock en bodega P-Box</p>
         </div>
-        <button
-          onClick={() => setModalProducto({ open: true, producto: null })}
-          className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
-        >
-          + Agregar producto
-        </button>
+        <div className="flex gap-2">
+          {productos.length > 0 && (
+            <button
+              onClick={() => exportarInventario(productos, rotacion)}
+              className="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              ↓ Exportar Excel
+            </button>
+          )}
+          <button
+            onClick={() => setModalProducto({ open: true, producto: null })}
+            className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+          >
+            + Agregar producto
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -267,9 +278,10 @@ export default function Inventario() {
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 {[
-                  { label: 'SKU',       align: 'left'  },
-                  { label: 'Nombre',    align: 'left'  },
-                  { label: 'Stock',     align: 'right' },
+                  { label: 'SKU',        align: 'left'  },
+                  { label: 'Nombre',     align: 'left'  },
+                  { label: 'Categoría',  align: 'left'  },
+                  { label: 'Stock',      align: 'right' },
                   { label: 'Mínimo',   align: 'right' },
                   { label: 'm² total', align: 'right' },
                   { label: 'Rot. 30d', align: 'right' },
@@ -294,6 +306,7 @@ export default function Inventario() {
                         <p className="text-xs text-gray-400 truncate max-w-[180px]">{p.descripcion}</p>
                       )}
                     </td>
+                    <td className="px-4 py-3 text-xs text-gray-400">{p.categoria || '—'}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`font-bold ${p.stock_bajo ? 'text-red-600' : 'text-gray-900'}`}>
                         {p.cantidad}

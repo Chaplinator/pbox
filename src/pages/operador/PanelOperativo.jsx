@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/supabase/client'
 import ModalGestionPedido from '@/components/operador/ModalGestionPedido'
+import { exportarPedidos } from '@/utils/exportExcel'
 
 const FILTROS = [
   { key: 'activos',    label: 'Activos'     },
@@ -97,9 +98,19 @@ export default function PanelOperativo() {
 
   return (
     <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Panel Operativo</h1>
-        <p className="text-gray-500 text-sm">Gestión de pedidos P-Box</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Panel Operativo</h1>
+          <p className="text-gray-500 text-sm">Gestión de pedidos P-Box</p>
+        </div>
+        {pedidos.length > 0 && (
+          <button
+            onClick={() => exportarPedidos(pedidosFiltrados)}
+            className="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            ↓ Exportar Excel
+          </button>
+        )}
       </div>
 
       {/* KPIs */}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/supabase/client'
 
 const VACIO = {
-  sku: '', nombre: '', descripcion: '',
+  sku: '', nombre: '', descripcion: '', categoria: '',
   peso_kg: '', largo_cm: '', ancho_cm: '', alto_cm: '',
   stock_inicial: '0', stock_minimo: '5',
 }
@@ -27,6 +27,7 @@ export default function ModalProducto({ open, onClose, clienteId, producto, onSa
       largo_cm:         producto.largo_cm ?? '',
       ancho_cm:         producto.ancho_cm ?? '',
       alto_cm:          producto.alto_cm ?? '',
+      categoria:     producto.categoria ?? '',
       stock_inicial: producto.cantidad ?? '0',
       stock_minimo:  producto.stock_minimo ?? '5',
     } : VACIO)
@@ -46,6 +47,7 @@ export default function ModalProducto({ open, onClose, clienteId, producto, onSa
         supabase.from('productos').update({
           sku: form.sku, nombre: form.nombre,
           descripcion: form.descripcion || null,
+          categoria:   form.categoria   || null,
           peso_kg: num(form.peso_kg),
           largo_cm: num(form.largo_cm),
           ancho_cm: num(form.ancho_cm),
@@ -62,6 +64,7 @@ export default function ModalProducto({ open, onClose, clienteId, producto, onSa
         p_sku:           form.sku,
         p_nombre:        form.nombre,
         p_descripcion:   form.descripcion || null,
+        p_categoria:     form.categoria   || null,
         p_peso_kg:       num(form.peso_kg),
         p_largo_cm:      num(form.largo_cm),
         p_ancho_cm:      num(form.ancho_cm),
@@ -100,9 +103,15 @@ export default function ModalProducto({ open, onClose, clienteId, producto, onSa
             </div>
           </div>
 
-          <div>
-            <label className={label}>Descripción</label>
-            <input name="descripcion" value={form.descripcion} onChange={set} className={input} placeholder="Opcional" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={label}>Descripción</label>
+              <input name="descripcion" value={form.descripcion} onChange={set} className={input} placeholder="Opcional" />
+            </div>
+            <div>
+              <label className={label}>Categoría</label>
+              <input name="categoria" value={form.categoria} onChange={set} className={input} placeholder="Ej: Ropa, Electrónica…" />
+            </div>
           </div>
 
           <div>

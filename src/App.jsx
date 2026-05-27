@@ -8,7 +8,10 @@ import Registro from '@/pages/auth/Registro'
 import Dashboard from '@/pages/cliente/Dashboard'
 import Inventario from '@/pages/cliente/Inventario'
 import Pedidos from '@/pages/cliente/Pedidos'
+import Perfil from '@/pages/cliente/Perfil'
 import PanelOperativo from '@/pages/operador/PanelOperativo'
+import Usuarios from '@/pages/operador/Usuarios'
+import Reportes from '@/pages/operador/Reportes'
 
 export default function App() {
   return (
@@ -25,6 +28,7 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/inventario" element={<Inventario />} />
               <Route path="/pedidos" element={<Pedidos />} />
+              <Route path="/perfil" element={<Perfil />} />
             </Route>
           </Route>
 
@@ -32,11 +36,13 @@ export default function App() {
           <Route element={<ProtectedRoute requiredRol="operador" />}>
             <Route element={<AppShell />}>
               <Route path="/operador" element={<PanelOperativo />} />
+              <Route path="/operador/usuarios" element={<Usuarios />} />
+              <Route path="/operador/reportes" element={<Reportes />} />
             </Route>
           </Route>
 
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/inventario" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
