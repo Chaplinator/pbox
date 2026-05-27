@@ -2,9 +2,10 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 
 const navCliente = [
-  { to: '/inventario', label: 'Inventario'  },
-  { to: '/pedidos',    label: 'Mis Pedidos' },
-  { to: '/perfil',     label: 'Mi Perfil'   },
+  { to: '/inventario',    label: 'Inventario'    },
+  { to: '/pedidos',       label: 'Mis Pedidos'   },
+  { to: '/destinatarios', label: 'Destinatarios' },
+  { to: '/perfil',        label: 'Mi Perfil'     },
 ]
 
 const navOperador = [

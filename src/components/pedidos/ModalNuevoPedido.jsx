@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/supabase/client'
 
 const inp = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent'
@@ -22,17 +23,26 @@ const VACIO_DEST = {
 }
 
 export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) {
-  const [productos, setProductos] = useState([])
-  const [items, setItems]         = useState([{ producto_id: '', cantidad: 1 }])
-  const [dest, setDest]           = useState(VACIO_DEST)
-  const [saving, setSaving]       = useState(false)
-  const [error, setError]         = useState('')
+  const { perfil } = useAuth()
+  const [productos, setProductos]         = useState([])
+  const [destinatarios, setDestinatarios] = useState([])
+  const [items, setItems]                 = useState([{ producto_id: '', cantidad: 1 }])
+  const [dest, setDest]                   = useState(VACIO_DEST)
+  const [guardarDest, setGuardarDest]     = useState(false)
+  const [saving, setSaving]               = useState(false)
+  const [error, setError]                 = useState('')
+  const [busqDest, setBusqDest]           = useState('')
+  const [mostrarLista, setMostrarLista]   = useState(false)
 
   useEffect(() => {
     if (!open || !clienteId) return
     setError('')
     setItems([{ producto_id: '', cantidad: 1 }])
     setDest(VACIO_DEST)
+    setGuardarDest(false)
+    setBusqDest('')
+    setMostrarLista(false)
+
     supabase
       .from('vista_inventario')
       .select('producto_id, sku, nombre, cantidad')
@@ -41,6 +51,13 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
       .gt('cantidad', 0)
       .order('nombre')
       .then(({ data }) => setProductos(data ?? []))
+
+    supabase
+      .from('destinatarios')
+      .select('*')
+      .eq('cliente_id', clienteId)
+      .order('apellidos')
+      .then(({ data }) => setDestinatarios(data ?? []))
   }, [open, clienteId])
 
   function setItem(i, field, val) {
@@ -50,13 +67,42 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
   function removeItem(i) { setItems(p => p.filter((_, idx) => idx !== i)) }
   function setD(e)       { setDest(d => ({ ...d, [e.target.name]: e.target.value })) }
 
+  function cargarDestinatario(d) {
+    setDest(prev => ({
+      ...prev,
+      destinatario_nombre:   d.nombres,
+      destinatario_apellido: d.apellidos,
+      destinatario_cedula:   d.cedula     ?? '',
+      destinatario_telefono: d.telefono1,
+      destinatario_telefono2:d.telefono2  ?? '',
+      destinatario_email:    d.email      ?? '',
+      direccion_entrega:     d.direccion  ?? '',
+      numero_casa:           d.numero_casa?? '',
+      ciudad_entrega:        d.ciudad     ?? '',
+      provincia_entrega:     d.provincia  ?? '',
+      referencias_entrega:   d.referencias?? '',
+    }))
+    setBusqDest(`${d.nombres} ${d.apellidos}`)
+    setMostrarLista(false)
+    setGuardarDest(false)
+  }
+
+  const destFiltrados = destinatarios.filter(d => {
+    const q = busqDest.toLowerCase()
+    if (!q) return true
+    return (
+      d.nombres.toLowerCase().includes(q) ||
+      d.apellidos.toLowerCase().includes(q) ||
+      (d.cedula ?? '').includes(q)
+    )
+  })
+
   async function submit(e) {
     e.preventDefault()
-    if (items.some(it => !it.producto_id)) { setError('Seleccioná un producto en cada fila.'); return }
+    if (items.some(it => !it.producto_id)) { setError('Selecciona un producto en cada fila.'); return }
     setSaving(true); setError('')
 
     const numero = `PB-${Date.now().toString().slice(-6)}`
-
     const { persona_recibe, ...destDB } = dest
 
     const { data: pedido, error: e1 } = await supabase
@@ -83,6 +129,24 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
       })))
 
     if (e2) { setError(e2.message); setSaving(false); return }
+
+    // Guardar destinatario si el usuario lo pidió
+    if (guardarDest && dest.destinatario_nombre && dest.destinatario_telefono) {
+      await supabase.from('destinatarios').insert({
+        cliente_id:  clienteId,
+        nombres:     dest.destinatario_nombre,
+        apellidos:   dest.destinatario_apellido,
+        cedula:      dest.destinatario_cedula     || null,
+        telefono1:   dest.destinatario_telefono,
+        telefono2:   dest.destinatario_telefono2  || null,
+        email:       dest.destinatario_email      || null,
+        direccion:   dest.direccion_entrega       || null,
+        numero_casa: dest.numero_casa             || null,
+        ciudad:      dest.ciudad_entrega          || null,
+        provincia:   dest.provincia_entrega       || null,
+        referencias: dest.referencias_entrega     || null,
+      })
+    }
 
     setSaving(false)
     onSaved()
@@ -138,7 +202,40 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
 
           {/* Datos del destinatario */}
           <div>
-            <p className={sec}>Datos del destinatario</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className={sec} style={{ marginBottom: 0 }}>Datos del destinatario</p>
+            </div>
+
+            {/* Buscador de destinatarios guardados */}
+            {destinatarios.length > 0 && (
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  value={busqDest}
+                  onChange={e => { setBusqDest(e.target.value); setMostrarLista(true) }}
+                  onFocus={() => setMostrarLista(true)}
+                  placeholder="Buscar destinatario guardado…"
+                  className="w-full px-3 py-2 border border-brand-300 bg-brand-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent placeholder-brand-400"
+                />
+                {mostrarLista && destFiltrados.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {destFiltrados.map(d => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onMouseDown={() => cargarDestinatario(d)}
+                        className="w-full text-left px-4 py-2.5 hover:bg-brand-50 text-sm transition-colors border-b border-gray-50 last:border-0"
+                      >
+                        <span className="font-medium text-gray-900">{d.nombres} {d.apellidos}</span>
+                        {d.cedula && <span className="text-gray-400 ml-2 text-xs">{d.cedula}</span>}
+                        {d.ciudad && <span className="text-gray-400 ml-2 text-xs">· {d.ciudad}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={lbl}>Nombres *</label>
@@ -216,6 +313,17 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
             <textarea name="notas" value={dest.notas} onChange={setD} rows={2}
               className={inp + ' resize-none'} placeholder="Empaque especial, instrucciones de despacho, etc." />
           </div>
+
+          {/* Guardar destinatario */}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={guardarDest}
+              onChange={e => setGuardarDest(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+            />
+            <span className="text-sm text-gray-600">Guardar este destinatario para futuros pedidos</span>
+          </label>
 
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 

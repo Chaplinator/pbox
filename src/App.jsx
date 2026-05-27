@@ -9,6 +9,7 @@ import Dashboard from '@/pages/cliente/Dashboard'
 import Inventario from '@/pages/cliente/Inventario'
 import Pedidos from '@/pages/cliente/Pedidos'
 import Perfil from '@/pages/cliente/Perfil'
+import Destinatarios from '@/pages/cliente/Destinatarios'
 import PanelOperativo from '@/pages/operador/PanelOperativo'
 import Usuarios from '@/pages/operador/Usuarios'
 import Reportes from '@/pages/operador/Reportes'
@@ -29,6 +30,7 @@ export default function App() {
               <Route path="/inventario" element={<Inventario />} />
               <Route path="/pedidos" element={<Pedidos />} />
               <Route path="/perfil" element={<Perfil />} />
+              <Route path="/destinatarios" element={<Destinatarios />} />
             </Route>
           </Route>
 
