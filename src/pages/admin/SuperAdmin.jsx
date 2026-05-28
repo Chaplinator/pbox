@@ -55,6 +55,93 @@ function EditableNumber({ value, onSave, suffix = '' }) {
   )
 }
 
+function ModalNuevaBodega({ open, onClose, onSaved }) {
+  const [form, setForm]     = useState({ nombre: '', slug: '', plan: 'basico', color_marca: '#1d4ed8' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState('')
+
+  useEffect(() => { if (open) { setForm({ nombre: '', slug: '', plan: 'basico', color_marca: '#1d4ed8' }); setError('') } }, [open])
+
+  function setF(e) { setForm(f => ({ ...f, [e.target.name]: e.target.value })) }
+
+  // Auto-generar slug desde nombre
+  function handleNombre(e) {
+    const nombre = e.target.value
+    const slug   = nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 30)
+    setForm(f => ({ ...f, nombre, slug }))
+  }
+
+  async function guardar(e) {
+    e.preventDefault(); setSaving(true); setError('')
+    const { error: err } = await supabase.from('bodegas').insert({
+      nombre: form.nombre, slug: form.slug, plan: form.plan, color_marca: form.color_marca,
+    })
+    setSaving(false)
+    if (err) { setError(err.message.includes('unique') ? 'Ese slug ya existe, elige otro.' : err.message); return }
+    onSaved()
+  }
+
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="font-semibold text-gray-900">Nueva bodega</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+        <form onSubmit={guardar} className="p-6 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Nombre *</label>
+            <input name="nombre" value={form.nombre} onChange={handleNombre} required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              placeholder="Tramaco Quito" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Slug (URL único) *</label>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-gray-400">pbox.ec/</span>
+              <input name="slug" value={form.slug} onChange={setF} required
+                pattern="[a-z0-9\-]+" title="Solo letras minúsculas, números y guiones"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
+                placeholder="tramaco-quito" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Plan inicial</label>
+              <select name="plan" value={form.plan} onChange={setF}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                {PLANES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Color de marca</label>
+              <div className="flex items-center gap-2">
+                <input type="color" name="color_marca" value={form.color_marca} onChange={setF}
+                  className="w-10 h-9 rounded-lg border border-gray-300 cursor-pointer p-0.5" />
+                <input name="color_marca" value={form.color_marca} onChange={setF}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  placeholder="#1d4ed8" />
+              </div>
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div className="flex justify-end gap-2 pt-1">
+            <button type="button" onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving}
+              className="px-4 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors">
+              {saving ? 'Creando…' : 'Crear bodega'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function SuperAdmin() {
   const [bodegas, setBodegas]   = useState([])
   const [stats, setStats]       = useState({})
@@ -62,6 +149,7 @@ export default function SuperAdmin() {
   const [expandido, setExpandido] = useState(null)
   const [clientes, setClientes] = useState({})
   const [saving, setSaving]     = useState(null)
+  const [modalBodega, setModalBodega] = useState(false)
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -161,9 +249,15 @@ export default function SuperAdmin() {
 
   return (
     <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Super Admin</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Vista global de todas las bodegas de P-Box</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Super Admin</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Vista global de todas las bodegas de P-Box</p>
+        </div>
+        <button onClick={() => setModalBodega(true)}
+          className="px-4 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors font-medium">
+          + Nueva bodega
+        </button>
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-8">
@@ -172,6 +266,12 @@ export default function SuperAdmin() {
         <KpiCard label="Total pedidos"    value={totalStats.pedidos}  />
         <KpiCard label="Total usuarios"   value={totalStats.usuarios} />
       </div>
+
+      <ModalNuevaBodega
+        open={modalBodega}
+        onClose={() => setModalBodega(false)}
+        onSaved={() => { setModalBodega(false); cargar() }}
+      />
 
       {loading ? (
         <div className="text-center py-16 text-gray-400 text-sm">Cargando…</div>
