@@ -1,13 +1,57 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/supabase/client'
 
-function KpiCard({ label, value, variant = 'default' }) {
+const PLANES = [
+  { value: 'basico',     label: 'Básico'      },
+  { value: 'pro',        label: 'Pro'         },
+  { value: 'enterprise', label: 'Enterprise'  },
+]
+
+const PLAN_STYLE = {
+  basico:     'bg-gray-100 text-gray-600',
+  pro:        'bg-blue-100 text-blue-700',
+  enterprise: 'bg-brand-100 text-brand-800',
+}
+
+function KpiCard({ label, value, sub, variant = 'default' }) {
   const colors = { default: 'text-gray-900', blue: 'text-brand-700', green: 'text-green-700', red: 'text-red-600' }
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
       <p className="text-sm text-gray-500">{label}</p>
       <p className={`text-3xl font-bold mt-1 ${colors[variant]}`}>{value ?? '—'}</p>
+      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
     </div>
+  )
+}
+
+function EditableNumber({ value, onSave, suffix = '' }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal]         = useState(value)
+
+  function handleKey(e) {
+    if (e.key === 'Enter') { onSave(Number(val)); setEditing(false) }
+    if (e.key === 'Escape') { setVal(value); setEditing(false) }
+  }
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        type="number" min="0" value={val}
+        onChange={e => setVal(e.target.value)}
+        onBlur={() => { onSave(Number(val)); setEditing(false) }}
+        onKeyDown={handleKey}
+        className="w-24 px-2 py-1 border border-brand-400 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand-500"
+      />
+    )
+  }
+
+  return (
+    <button onClick={() => setEditing(true)}
+      className="text-sm text-gray-700 hover:text-brand-600 hover:underline cursor-pointer transition-colors"
+      title="Click para editar">
+      {value} {suffix}
+    </button>
   )
 }
 
@@ -44,20 +88,41 @@ export default function SuperAdmin() {
   async function cargarClientesBodega(bodegaId) {
     const { data: cs } = await supabase
       .from('clientes')
-      .select('id, nombre_negocio, m2_contratados, created_at, usuario_id')
+      .select('id, nombre_negocio, m2_contratados, m2_precio_adicional, plan, plan_limite_pedidos_mes, plan_vence_at, created_at, usuario_id')
       .eq('bodega_id', bodegaId)
       .order('created_at')
 
     if (!cs?.length) { setClientes(c => ({ ...c, [bodegaId]: [] })); return }
 
     const ids = cs.map(c => c.usuario_id).filter(Boolean)
-    const { data: users } = await supabase
-      .from('usuarios')
-      .select('id, nombre, apellido, email, activo')
-      .in('id', ids)
+    const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
-    const userMap = Object.fromEntries((users ?? []).map(u => [u.id, u]))
-    const merged = cs.map(c => ({ ...c, dueno: userMap[c.usuario_id] ?? null }))
+    const [usersRes, pedidosTotalRes, pedidosMesRes] = await Promise.all([
+      supabase.from('usuarios').select('id, nombre, apellido, email, activo').in('id', ids),
+      // Total de pedidos por cliente
+      supabase.from('pedidos').select('cliente_id', { count: 'exact' })
+        .in('cliente_id', cs.map(c => c.id)).neq('estado', 'cancelado'),
+      // Pedidos este mes por cliente
+      supabase.from('pedidos').select('cliente_id')
+        .in('cliente_id', cs.map(c => c.id))
+        .neq('estado', 'cancelado')
+        .gte('created_at', inicioMes),
+    ])
+
+    const userMap = Object.fromEntries((usersRes.data ?? []).map(u => [u.id, u]))
+
+    // Contar por cliente
+    const totalPorCliente = {}
+    const mesPorCliente   = {}
+    for (const p of (pedidosTotalRes.data ?? [])) totalPorCliente[p.cliente_id] = (totalPorCliente[p.cliente_id] ?? 0) + 1
+    for (const p of (pedidosMesRes.data  ?? [])) mesPorCliente[p.cliente_id]   = (mesPorCliente[p.cliente_id]   ?? 0) + 1
+
+    const merged = cs.map(c => ({
+      ...c,
+      dueno:           userMap[c.usuario_id] ?? null,
+      pedidos_total:   totalPorCliente[c.id] ?? 0,
+      pedidos_mes:     mesPorCliente[c.id]   ?? 0,
+    }))
     setClientes(c => ({ ...c, [bodegaId]: merged }))
   }
 
@@ -68,15 +133,23 @@ export default function SuperAdmin() {
   }
 
   async function toggleCliente(bodegaId, clienteId, usuarioId, activo) {
-    setSaving(clienteId)
-    // Desactivar/activar el usuario dueño + todos sus sub-usuarios
-    await supabase
-      .from('usuarios')
-      .update({ activo: !activo })
+    setSaving(`toggle-${clienteId}`)
+    await supabase.from('usuarios').update({ activo: !activo })
       .or(`id.eq.${usuarioId},cliente_id.eq.${clienteId}`)
     setSaving(null)
-    cargarClientesBodega(bodegaId)
-    cargar()
+    cargarClientesBodega(bodegaId); cargar()
+  }
+
+  async function actualizarCliente(bodegaId, clienteId, campo, valor) {
+    setSaving(`${campo}-${clienteId}`)
+    await supabase.from('clientes').update({ [campo]: valor }).eq('id', clienteId)
+    setSaving(null)
+    setClientes(prev => ({
+      ...prev,
+      [bodegaId]: (prev[bodegaId] ?? []).map(c =>
+        c.id === clienteId ? { ...c, [campo]: valor } : c
+      ),
+    }))
   }
 
   const totalStats = {
@@ -111,94 +184,147 @@ export default function SuperAdmin() {
 
             return (
               <div key={b.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                {/* Cabecera bodega */}
                 <button onClick={() => abrir(b.id)}
                   className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left">
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-gray-900">{b.nombre}</p>
                       <span className="text-xs font-mono text-gray-400">/{b.slug}</span>
-                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{b.plan}</span>
                       {!b.activo && (
                         <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">Inactiva</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Creada: {new Date(b.created_at).toLocaleDateString('es-EC')}
-                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">Creada: {new Date(b.created_at).toLocaleDateString('es-EC')}</p>
                   </div>
                   <div className="flex items-center gap-6">
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-gray-800">{s.clientes ?? '—'}</p>
-                      <p className="text-xs text-gray-400">Empresas</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-gray-800">{s.pedidos ?? '—'}</p>
-                      <p className="text-xs text-gray-400">Pedidos</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-gray-800">{s.usuarios ?? '—'}</p>
-                      <p className="text-xs text-gray-400">Usuarios</p>
-                    </div>
+                    <div className="text-center"><p className="text-lg font-bold text-gray-800">{s.clientes ?? '—'}</p><p className="text-xs text-gray-400">Empresas</p></div>
+                    <div className="text-center"><p className="text-lg font-bold text-gray-800">{s.pedidos ?? '—'}</p><p className="text-xs text-gray-400">Pedidos</p></div>
+                    <div className="text-center"><p className="text-lg font-bold text-gray-800">{s.usuarios ?? '—'}</p><p className="text-xs text-gray-400">Usuarios</p></div>
                     <span className="text-gray-300 ml-2">{open ? '▲' : '▼'}</span>
                   </div>
                 </button>
 
-                {/* Tabla de clientes (empresas) */}
                 {open && (
                   <div className="border-t border-gray-100">
                     {cs.length === 0 ? (
                       <p className="px-5 py-4 text-sm text-gray-400">Sin clientes registrados.</p>
                     ) : (
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-50 border-b border-gray-100">
-                          <tr className="text-xs text-gray-400">
-                            <th className="text-left px-5 py-3 font-semibold uppercase tracking-wide">Empresa</th>
-                            <th className="text-left px-4 py-3 font-semibold uppercase tracking-wide">Dueño</th>
-                            <th className="text-left px-4 py-3 font-semibold uppercase tracking-wide">Email</th>
-                            <th className="text-right px-4 py-3 font-semibold uppercase tracking-wide">m² contratados</th>
-                            <th className="text-left px-4 py-3 font-semibold uppercase tracking-wide">Estado</th>
-                            <th className="px-4 py-3" />
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                          {cs.map(c => {
-                            const dueno  = c.dueno
-                            const activo = dueno?.activo ?? true
-                            return (
-                              <tr key={c.id} className={`hover:bg-gray-50 transition-colors ${!activo ? 'opacity-50' : ''}`}>
-                                <td className="px-5 py-3 font-medium text-gray-900">
-                                  {c.nombre_negocio ?? '—'}
-                                </td>
-                                <td className="px-4 py-3 text-gray-600">
-                                  {[dueno?.nombre, dueno?.apellido].filter(Boolean).join(' ') || '—'}
-                                </td>
-                                <td className="px-4 py-3 text-gray-400 text-xs">{dueno?.email}</td>
-                                <td className="px-4 py-3 text-right text-gray-600">{c.m2_contratados} m²</td>
-                                <td className="px-4 py-3">
-                                  {activo
-                                    ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Activo</span>
-                                    : <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-semibold">Suspendido</span>
-                                  }
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <button
-                                    disabled={saving === c.id}
-                                    onClick={() => toggleCliente(b.id, c.id, dueno?.id, activo)}
-                                    className={`text-xs px-3 py-1 rounded-lg transition-colors disabled:opacity-50 ${
-                                      activo
-                                        ? 'text-red-500 hover:bg-red-50 border border-red-200'
-                                        : 'text-green-600 hover:bg-green-50 border border-green-200'
-                                    }`}
-                                  >
-                                    {saving === c.id ? '…' : activo ? 'Suspender' : 'Activar'}
-                                  </button>
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 border-b border-gray-100">
+                            <tr className="text-xs text-gray-400 font-semibold uppercase tracking-wide">
+                              <th className="text-left px-5 py-3">Empresa</th>
+                              <th className="text-left px-4 py-3">Dueño / Email</th>
+                              <th className="text-center px-4 py-3">Plan</th>
+                              <th className="text-center px-4 py-3">m² contratados</th>
+                              <th className="text-center px-4 py-3">Pedidos / mes</th>
+                              <th className="text-center px-4 py-3">Total pedidos</th>
+                              <th className="text-center px-4 py-3">Estado</th>
+                              <th className="px-4 py-3" />
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {cs.map(c => {
+                              const dueno  = c.dueno
+                              const activo = dueno?.activo ?? true
+                              const limPed = c.plan_limite_pedidos_mes
+                              const pctPed = limPed ? Math.round((c.pedidos_mes / limPed) * 100) : null
+
+                              return (
+                                <tr key={c.id} className={`hover:bg-gray-50 transition-colors ${!activo ? 'opacity-50' : ''}`}>
+                                  <td className="px-5 py-3">
+                                    <p className="font-semibold text-gray-900">{c.nombre_negocio ?? '—'}</p>
+                                    <p className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString('es-EC')}</p>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <p className="text-gray-700">{[dueno?.nombre, dueno?.apellido].filter(Boolean).join(' ') || '—'}</p>
+                                    <p className="text-xs text-gray-400">{dueno?.email}</p>
+                                  </td>
+
+                                  {/* Plan — editable */}
+                                  <td className="px-4 py-3 text-center">
+                                    <select
+                                      value={c.plan}
+                                      onChange={e => actualizarCliente(b.id, c.id, 'plan', e.target.value)}
+                                      disabled={saving === `plan-${c.id}`}
+                                      className={`text-xs px-2 py-1 rounded-lg font-semibold border-0 cursor-pointer focus:ring-2 focus:ring-brand-500 focus:outline-none ${PLAN_STYLE[c.plan] ?? PLAN_STYLE.basico}`}
+                                    >
+                                      {PLANES.map(p => (
+                                        <option key={p.value} value={p.value}>{p.label}</option>
+                                      ))}
+                                    </select>
+                                  </td>
+
+                                  {/* m² — editable */}
+                                  <td className="px-4 py-3 text-center">
+                                    <EditableNumber
+                                      value={c.m2_contratados}
+                                      suffix="m²"
+                                      onSave={v => actualizarCliente(b.id, c.id, 'm2_contratados', v)}
+                                    />
+                                  </td>
+
+                                  {/* Pedidos este mes */}
+                                  <td className="px-4 py-3 text-center">
+                                    <div>
+                                      <p className={`font-semibold ${pctPed >= 90 ? 'text-red-500' : pctPed >= 70 ? 'text-yellow-600' : 'text-gray-800'}`}>
+                                        {c.pedidos_mes}
+                                        {limPed && <span className="text-gray-400 font-normal text-xs"> / {limPed}</span>}
+                                      </p>
+                                      {pctPed !== null && (
+                                        <div className="w-16 bg-gray-200 rounded-full h-1 mx-auto mt-1">
+                                          <div
+                                            className={`h-1 rounded-full ${pctPed >= 90 ? 'bg-red-400' : pctPed >= 70 ? 'bg-yellow-400' : 'bg-brand-500'}`}
+                                            style={{ width: `${Math.min(pctPed, 100)}%` }}
+                                          />
+                                        </div>
+                                      )}
+                                      {/* Límite editable */}
+                                      <p className="text-xs text-gray-400 mt-1">
+                                        Límite:{' '}
+                                        <EditableNumber
+                                          value={limPed ?? 0}
+                                          onSave={v => actualizarCliente(b.id, c.id, 'plan_limite_pedidos_mes', v === 0 ? null : v)}
+                                        />
+                                        {limPed ? '' : ' (sin límite)'}
+                                      </p>
+                                    </div>
+                                  </td>
+
+                                  {/* Total pedidos */}
+                                  <td className="px-4 py-3 text-center">
+                                    <p className="font-semibold text-gray-800">{c.pedidos_total}</p>
+                                    <p className="text-xs text-gray-400">histórico</p>
+                                  </td>
+
+                                  {/* Estado */}
+                                  <td className="px-4 py-3 text-center">
+                                    {activo
+                                      ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Activo</span>
+                                      : <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-semibold">Suspendido</span>
+                                    }
+                                  </td>
+
+                                  {/* Acciones */}
+                                  <td className="px-4 py-3 text-right">
+                                    <button
+                                      disabled={saving === `toggle-${c.id}`}
+                                      onClick={() => toggleCliente(b.id, c.id, dueno?.id, activo)}
+                                      className={`text-xs px-3 py-1 rounded-lg transition-colors border disabled:opacity-50 ${
+                                        activo
+                                          ? 'text-red-500 hover:bg-red-50 border-red-200'
+                                          : 'text-green-600 hover:bg-green-50 border-green-200'
+                                      }`}
+                                    >
+                                      {saving === `toggle-${c.id}` ? '…' : activo ? 'Suspender' : 'Activar'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     )}
                   </div>
                 )}
