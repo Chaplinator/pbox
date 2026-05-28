@@ -130,7 +130,16 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
         cantidad:    Number(it.cantidad),
       })))
 
-    if (e2) { setError(e2.message); setSaving(false); return }
+    if (e2) {
+      // Limpiar el pedido si la inserción de items falló (ej: stock insuficiente)
+      await supabase.from('pedidos').delete().eq('id', pedido.id)
+      const msg = e2.message?.includes('Stock insuficiente')
+        ? 'Stock insuficiente para uno o más productos. Verifica las cantidades disponibles.'
+        : e2.message
+      setError(msg)
+      setSaving(false)
+      return
+    }
 
     // Guardar destinatario si el usuario lo pidió
     if (guardarDest && dest.destinatario_nombre && dest.destinatario_telefono) {

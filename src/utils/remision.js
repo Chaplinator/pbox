@@ -1,3 +1,13 @@
+// Escapa caracteres HTML para prevenir XSS al inyectar datos de usuarios en el documento
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 export function imprimirRemision(pedido) {
   const items = pedido.items_pedido ?? []
   const nombreDest = [pedido.destinatario_nombre, pedido.destinatario_apellido].filter(Boolean).join(' ')
@@ -12,9 +22,9 @@ export function imprimirRemision(pedido) {
 
   const filas = items.map(it => `
     <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#374151;">${it.productos?.nombre ?? '—'}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-family:monospace;font-size:12px;color:#6b7280;">${it.productos?.sku ?? '—'}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;font-size:13px;color:#111827;">${it.cantidad}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#374151;">${esc(it.productos?.nombre)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-family:monospace;font-size:12px;color:#6b7280;">${esc(it.productos?.sku)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;font-size:13px;color:#111827;">${Number(it.cantidad)}</td>
     </tr>
   `).join('')
 
@@ -63,23 +73,23 @@ export function imprimirRemision(pedido) {
       <div style="font-size:12px;color:#6b7280;margin-top:4px;">Guía de remisión</div>
     </div>
     <div class="doc-info">
-      <div class="doc-number">${pedido.numero_pedido}</div>
+      <div class="doc-number">${esc(pedido.numero_pedido)}</div>
       <div class="doc-date">Emitida: ${hoy}</div>
-      <div style="margin-top:6px;"><span class="badge">${pedido.estado ?? ''}</span></div>
+      <div style="margin-top:6px;"><span class="badge">${esc(pedido.estado)}</span></div>
     </div>
   </div>
 
   <div class="info-grid" style="margin-bottom:20px;">
     <div class="info-box">
       <div class="info-label">Cliente</div>
-      <div class="info-value">${pedido.cliente_nombre ?? '—'}</div>
-      <div style="font-size:11px;color:#6b7280;margin-top:4px;">Pedido creado: ${fecha}</div>
+      <div class="info-value">${esc(pedido.cliente_nombre) || '—'}</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:4px;">Pedido creado: ${hoy}</div>
     </div>
     <div class="info-box">
       ${pedido.courrier ? `
       <div class="info-label">Courier</div>
-      <div class="info-value">${pedido.courrier}</div>
-      ${pedido.numero_guia ? `<div style="font-size:12px;color:#6b7280;font-family:monospace;margin-top:4px;">Guía: ${pedido.numero_guia}</div>` : ''}
+      <div class="info-value">${esc(pedido.courrier)}</div>
+      ${pedido.numero_guia ? `<div style="font-size:12px;color:#6b7280;font-family:monospace;margin-top:4px;">Guía: ${esc(pedido.numero_guia)}</div>` : ''}
       ` : `<div class="info-label">Courier</div><div class="info-value" style="color:#d1d5db;">Sin asignar</div>`}
     </div>
   </div>
@@ -89,18 +99,18 @@ export function imprimirRemision(pedido) {
     <div class="info-grid">
       <div class="info-box">
         <div class="info-label">Nombre</div>
-        <div class="info-value">${nombreDest || '—'}</div>
-        ${pedido.destinatario_cedula ? `<div style="font-size:11px;color:#6b7280;margin-top:4px;">C.I.: ${pedido.destinatario_cedula}</div>` : ''}
+        <div class="info-value">${esc(nombreDest) || '—'}</div>
+        ${pedido.destinatario_cedula ? `<div style="font-size:11px;color:#6b7280;margin-top:4px;">C.I.: ${esc(pedido.destinatario_cedula)}</div>` : ''}
       </div>
       <div class="info-box">
         <div class="info-label">Contacto</div>
-        <div class="info-value">${pedido.destinatario_telefono ?? '—'}</div>
-        ${pedido.destinatario_telefono2 ? `<div style="font-size:12px;color:#6b7280;margin-top:2px;">${pedido.destinatario_telefono2}</div>` : ''}
+        <div class="info-value">${esc(pedido.destinatario_telefono) || '—'}</div>
+        ${pedido.destinatario_telefono2 ? `<div style="font-size:12px;color:#6b7280;margin-top:2px;">${esc(pedido.destinatario_telefono2)}</div>` : ''}
       </div>
       <div class="info-box" style="grid-column:1/-1;">
         <div class="info-label">Dirección de entrega</div>
-        <div class="info-value">${[direccion, ciudad].filter(Boolean).join(' · ') || '—'}</div>
-        ${pedido.referencias_entrega ? `<div style="font-size:11px;color:#6b7280;margin-top:4px;">Ref: ${pedido.referencias_entrega}</div>` : ''}
+        <div class="info-value">${esc([direccion, ciudad].filter(Boolean).join(' · ')) || '—'}</div>
+        ${pedido.referencias_entrega ? `<div style="font-size:11px;color:#6b7280;margin-top:4px;">Ref: ${esc(pedido.referencias_entrega)}</div>` : ''}
       </div>
     </div>
   </div>
@@ -118,13 +128,13 @@ export function imprimirRemision(pedido) {
   ${pedido.notas ? `
   <div class="section">
     <div class="section-title">Notas</div>
-    <div style="background:#fffbeb;border-radius:8px;padding:12px;font-size:13px;color:#92400e;">${pedido.notas}</div>
+    <div style="background:#fffbeb;border-radius:8px;padding:12px;font-size:13px;color:#92400e;">${esc(pedido.notas)}</div>
   </div>` : ''}
 
   <div class="footer">
     <div>
       <div class="footer-text">P-Box · Guía de remisión</div>
-      <div class="footer-text">${pedido.numero_pedido} · ${hoy}</div>
+      <div class="footer-text">${esc(pedido.numero_pedido)} · ${hoy}</div>
     </div>
     <div>
       <div class="sign-box" style="min-width:160px;min-height:40px;"></div>
