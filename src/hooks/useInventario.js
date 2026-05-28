@@ -15,16 +15,13 @@ export function useInventario(clienteId) {
 
     const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
-    const [invRes, rotRes, envRes] = await Promise.all([
+    const [invRes, envRes] = await Promise.all([
       supabase
         .from('vista_inventario')
         .select('*')
         .eq('cliente_id', clienteId)
         .eq('activo', true)
         .order('nombre'),
-      supabase
-        .from('vista_rotacion_30d')
-        .select('*'),
       supabase
         .from('pedidos')
         .select('id', { count: 'exact', head: true })
@@ -36,11 +33,21 @@ export function useInventario(clienteId) {
     if (invRes.error) {
       setError(invRes.error.message)
     } else {
-      setProductos(invRes.data ?? [])
-      const map = {}
-      for (const r of (rotRes.data ?? [])) map[r.producto_id] = r
-      setRotacion(map)
+      const prods = invRes.data ?? []
+      setProductos(prods)
       setEnviosMes(envRes.count ?? 0)
+
+      // Solo consultar rotación para los productos de este cliente
+      const ids = prods.map(p => p.producto_id)
+      if (ids.length > 0) {
+        const { data: rotData } = await supabase
+          .from('vista_rotacion_30d')
+          .select('*')
+          .in('producto_id', ids)
+        const map = {}
+        for (const r of (rotData ?? [])) map[r.producto_id] = r
+        setRotacion(map)
+      }
     }
 
     setLoading(false)

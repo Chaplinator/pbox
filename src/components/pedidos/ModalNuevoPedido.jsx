@@ -103,7 +103,8 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
     if (items.some(it => !it.producto_id)) { setError('Selecciona un producto en cada fila.'); return }
     setSaving(true); setError('')
 
-    const numero = `PB-${Date.now().toString().slice(-6)}`
+    const rand = Math.random().toString(36).slice(2, 5).toUpperCase()
+    const numero = `PB-${Date.now().toString(36).toUpperCase()}-${rand}`
     const { persona_recibe, ...destDB } = dest
 
     const { data: pedido, error: e1 } = await supabase

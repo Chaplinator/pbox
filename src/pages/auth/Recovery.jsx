@@ -14,7 +14,6 @@ export default function Recovery() {
   const [done, setDone]         = useState(false)
 
   useEffect(() => {
-    // Si la sesión de recovery ya está activa al montar el componente
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setReady(true)
     })
@@ -22,7 +21,11 @@ export default function Recovery() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setReady(true)
     })
-    return () => subscription.unsubscribe()
+
+    // Si en 8 segundos no llega el evento, el enlace es inválido o expiró
+    const timeout = setTimeout(() => setReady('invalid'), 8000)
+
+    return () => { subscription.unsubscribe(); clearTimeout(timeout) }
   }, [])
 
   async function handleSubmit(e) {
@@ -47,6 +50,21 @@ export default function Recovery() {
           <p className="text-2xl font-bold text-brand-700 mb-2">P-Box</p>
           <p className="text-green-600 font-medium">Contraseña actualizada correctamente.</p>
           <p className="text-gray-400 text-sm mt-1">Redirigiendo…</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (ready === 'invalid') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="text-center max-w-sm">
+          <p className="text-2xl font-bold text-brand-700 mb-4">P-Box</p>
+          <p className="text-gray-700 font-medium mb-1">Enlace inválido o expirado</p>
+          <p className="text-gray-400 text-sm mb-6">El enlace de recuperación ya fue usado o expiró. Solicita uno nuevo.</p>
+          <a href="/login" className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
+            Volver al inicio de sesión
+          </a>
         </div>
       </div>
     )
