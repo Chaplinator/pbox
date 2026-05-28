@@ -4,14 +4,16 @@ import { useAuth } from '@/context/AuthContext'
 const navCliente = [
   { to: '/inventario',    label: 'Inventario'    },
   { to: '/pedidos',       label: 'Mis Pedidos'   },
+  { to: '/ingresos',      label: 'Ingresos'      },
   { to: '/destinatarios', label: 'Destinatarios' },
   { to: '/perfil',        label: 'Mi Perfil'     },
 ]
 
 const navOperador = [
-  { to: '/operador',          label: 'Panel Operativo' },
-  { to: '/operador/reportes', label: 'Reportes'        },
-  { to: '/operador/usuarios', label: 'Usuarios'        },
+  { to: '/operador',            label: 'Panel Operativo' },
+  { to: '/operador/recepcion',  label: 'Recepción'       },
+  { to: '/operador/reportes',   label: 'Reportes'        },
+  { to: '/operador/usuarios',   label: 'Usuarios'        },
 ]
 
 function NavSection({ items }) {

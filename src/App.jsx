@@ -12,7 +12,9 @@ import Inventario from '@/pages/cliente/Inventario'
 import Pedidos from '@/pages/cliente/Pedidos'
 import Perfil from '@/pages/cliente/Perfil'
 import Destinatarios from '@/pages/cliente/Destinatarios'
+import Ingresos from '@/pages/cliente/Ingresos'
 import PanelOperativo from '@/pages/operador/PanelOperativo'
+import RecepcionInventario from '@/pages/operador/RecepcionInventario'
 import Usuarios from '@/pages/operador/Usuarios'
 import Reportes from '@/pages/operador/Reportes'
 
@@ -36,6 +38,7 @@ export default function App() {
               <Route path="/pedidos" element={<Pedidos />} />
               <Route path="/perfil" element={<Perfil />} />
               <Route path="/destinatarios" element={<Destinatarios />} />
+              <Route path="/ingresos" element={<Ingresos />} />
             </Route>
           </Route>
 
@@ -45,6 +48,7 @@ export default function App() {
               <Route path="/operador" element={<PanelOperativo />} />
               <Route path="/operador/usuarios" element={<Usuarios />} />
               <Route path="/operador/reportes" element={<Reportes />} />
+              <Route path="/operador/recepcion" element={<RecepcionInventario />} />
             </Route>
           </Route>
 
