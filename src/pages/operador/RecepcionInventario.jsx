@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/supabase/client'
+import { alertaM2 } from '@/utils/alertas'
 
 const ESTADO_STYLE = {
   pendiente: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pendiente' },
@@ -42,6 +43,7 @@ function ModalConfirmar({ ingreso, onClose, onConfirmado }) {
 
     setSaving(false)
     if (err) { setError(err.message); return }
+    alertaM2(ingreso.cliente_id)
     onConfirmado()
   }
 

@@ -5,6 +5,7 @@ export function useInventario(clienteId) {
   const [productos, setProductos] = useState([])
   const [rotacion, setRotacion] = useState({})
   const [enviosMes, setEnviosMes] = useState(0)
+  const [m2Contratados, setM2Contratados] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -15,7 +16,7 @@ export function useInventario(clienteId) {
 
     const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
-    const [invRes, envRes] = await Promise.all([
+    const [invRes, envRes, clienteRes] = await Promise.all([
       supabase
         .from('vista_inventario')
         .select('*')
@@ -28,6 +29,11 @@ export function useInventario(clienteId) {
         .eq('cliente_id', clienteId)
         .in('estado', ['despachado', 'entregado'])
         .gte('updated_at', inicioMes),
+      supabase
+        .from('clientes')
+        .select('m2_contratados')
+        .eq('id', clienteId)
+        .single(),
     ])
 
     if (invRes.error) {
@@ -36,6 +42,7 @@ export function useInventario(clienteId) {
       const prods = invRes.data ?? []
       setProductos(prods)
       setEnviosMes(envRes.count ?? 0)
+      setM2Contratados(clienteRes.data?.m2_contratados ?? null)
 
       // Solo consultar rotación para los productos de este cliente
       const ids = prods.map(p => p.producto_id)
@@ -62,5 +69,9 @@ export function useInventario(clienteId) {
     bajoMinimo: productos.filter(p => p.stock_bajo).length,
   }
 
-  return { productos, rotacion, stats, enviosMes, loading, error, refetch: fetch }
+  const m2Uso = m2Contratados
+    ? { usado: parseFloat(stats.totalM2), contratado: m2Contratados, pct: (parseFloat(stats.totalM2) / m2Contratados) * 100 }
+    : null
+
+  return { productos, rotacion, stats, enviosMes, m2Uso, loading, error, refetch: fetch }
 }

@@ -38,7 +38,8 @@ export default function Perfil() {
     direccion: '', ciudad: '', provincia: '', pais: 'Ecuador',
   })
   const [clienteId, setClienteId] = useState(null)
-  const [alertas, setAlertas]     = useState({ alerta_stock: true, alerta_pedidos: true })
+  const [alertas, setAlertas]     = useState({ alerta_stock: true, alerta_pedidos: true, alerta_m2: true, alerta_m2_pct: 80 })
+  const [m2Contratados, setM2Contratados] = useState(null)
   const [loading, setLoading]     = useState(true)
 
   const [savingP, setSavingP] = useState(false)
@@ -70,7 +71,10 @@ export default function Perfil() {
           setAlertas({
             alerta_stock:   data.alerta_stock   ?? true,
             alerta_pedidos: data.alerta_pedidos ?? true,
+            alerta_m2:      data.alerta_m2      ?? true,
+            alerta_m2_pct:  data.alerta_m2_pct  ?? 80,
           })
+          setM2Contratados(data.m2_contratados ?? null)
         }
         setLoading(false)
       })
@@ -125,7 +129,12 @@ export default function Perfil() {
     setSavingA(true); setSavedA(false)
     const { error } = await supabase
       .from('clientes')
-      .update({ alerta_stock: alertas.alerta_stock, alerta_pedidos: alertas.alerta_pedidos })
+      .update({
+        alerta_stock:   alertas.alerta_stock,
+        alerta_pedidos: alertas.alerta_pedidos,
+        alerta_m2:      alertas.alerta_m2,
+        alerta_m2_pct:  alertas.alerta_m2_pct,
+      })
       .eq('id', clienteId)
     setSavingA(false)
     if (error) return
@@ -246,6 +255,28 @@ export default function Perfil() {
               <div>
                 <p className="text-sm font-medium text-gray-800">Cambios de estado en pedidos</p>
                 <p className="text-xs text-gray-400">Te avisamos cada vez que un pedido cambie de estado.</p>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={alertas.alerta_m2}
+                onChange={e => setAlertas(a => ({ ...a, alerta_m2: e.target.checked }))}
+                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-800">Espacio de bodega al límite</p>
+                <p className="text-xs text-gray-400 mb-2">
+                  Te avisamos cuando uses más del{' '}
+                  <span className="font-semibold text-gray-600">{alertas.alerta_m2_pct}%</span>
+                  {m2Contratados ? ` de tus ${m2Contratados} m² contratados.` : ' de tu espacio contratado.'}
+                </p>
+                {alertas.alerta_m2 && (
+                  <div className="flex items-center gap-2">
+                    <input type="range" min="60" max="95" step="5"
+                      value={alertas.alerta_m2_pct}
+                      onChange={e => setAlertas(a => ({ ...a, alerta_m2_pct: Number(e.target.value) }))}
+                      className="w-32 accent-brand-600" />
+                    <span className="text-xs text-gray-500 w-10">{alertas.alerta_m2_pct}%</span>
+                  </div>
+                )}
               </div>
             </label>
           </div>

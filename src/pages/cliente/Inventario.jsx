@@ -9,6 +9,7 @@ import {
   PieChart, Pie,
 } from 'recharts'
 import { exportarInventario } from '@/utils/exportExcel'
+import { alertaM2 } from '@/utils/alertas'
 
 const COLORS = ['#1e3a5f','#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#a5b4fc','#bae6fd']
 
@@ -59,7 +60,7 @@ export default function Inventario() {
   const [modalProducto, setModalProducto] = useState({ open: false, producto: null })
   const [modalStock, setModalStock] = useState({ open: false, producto: null })
 
-  const { productos, rotacion, stats, enviosMes, loading, refetch } = useInventario(clienteId)
+  const { productos, rotacion, stats, enviosMes, m2Uso, loading, refetch } = useInventario(clienteId)
 
   useEffect(() => {
     if (!perfil) return
@@ -73,7 +74,7 @@ export default function Inventario() {
   )
 
   function onProductoGuardado() { setModalProducto({ open: false, producto: null }); refetch() }
-  function onStockGuardado()    { setModalStock({ open: false, producto: null });    refetch() }
+  function onStockGuardado()    { setModalStock({ open: false, producto: null });    refetch(); alertaM2(clienteId) }
 
   async function eliminarProducto(p) {
     if (!confirm(`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`)) return
@@ -135,6 +136,38 @@ export default function Inventario() {
         />
         <StatCard label="Envíos este mes" value={enviosMes} variant="green" />
       </div>
+
+      {/* Barra de uso de m2 */}
+      {m2Uso && (
+        <div className={`mb-6 rounded-xl border px-5 py-4 ${
+          m2Uso.pct >= 95 ? 'bg-red-50 border-red-200' :
+          m2Uso.pct >= 80 ? 'bg-yellow-50 border-yellow-200' :
+          'bg-white border-gray-200'
+        }`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className={`text-sm font-medium ${m2Uso.pct >= 95 ? 'text-red-700' : m2Uso.pct >= 80 ? 'text-yellow-700' : 'text-gray-700'}`}>
+              Espacio en bodega
+              {m2Uso.pct >= 80 && (
+                <span className="ml-2 text-xs font-semibold">
+                  {m2Uso.pct >= 95 ? '⚠️ Casi sin espacio' : '⚠️ Espacio limitado'}
+                </span>
+              )}
+            </span>
+            <span className="text-sm text-gray-500">
+              <span className="font-semibold text-gray-800">{m2Uso.usado.toFixed(1)} m²</span>
+              {' '}de{' '}
+              <span className="font-semibold text-gray-800">{m2Uso.contratado} m²</span>
+              <span className="ml-2 text-gray-400">({m2Uso.pct.toFixed(0)}%)</span>
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              className={`h-2.5 rounded-full transition-all ${m2Uso.pct >= 95 ? 'bg-red-500' : m2Uso.pct >= 80 ? 'bg-yellow-400' : 'bg-brand-500'}`}
+              style={{ width: `${Math.min(m2Uso.pct, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Mini dashboard */}
       {!loading && productos.length > 0 && (() => {
