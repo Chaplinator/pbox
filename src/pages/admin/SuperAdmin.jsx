@@ -42,15 +42,23 @@ export default function SuperAdmin() {
   useEffect(() => { cargar() }, [cargar])
 
   async function cargarClientesBodega(bodegaId) {
-    const { data } = await supabase
+    const { data: cs } = await supabase
       .from('clientes')
-      .select(`
-        id, nombre_negocio, m2_contratados, created_at,
-        usuarios!inner ( id, nombre, apellido, email, activo )
-      `)
+      .select('id, nombre_negocio, m2_contratados, created_at, usuario_id')
       .eq('bodega_id', bodegaId)
       .order('created_at')
-    setClientes(c => ({ ...c, [bodegaId]: data ?? [] }))
+
+    if (!cs?.length) { setClientes(c => ({ ...c, [bodegaId]: [] })); return }
+
+    const ids = cs.map(c => c.usuario_id).filter(Boolean)
+    const { data: users } = await supabase
+      .from('usuarios')
+      .select('id, nombre, apellido, email, activo')
+      .in('id', ids)
+
+    const userMap = Object.fromEntries((users ?? []).map(u => [u.id, u]))
+    const merged = cs.map(c => ({ ...c, dueno: userMap[c.usuario_id] ?? null }))
+    setClientes(c => ({ ...c, [bodegaId]: merged }))
   }
 
   function abrir(id) {
@@ -155,7 +163,7 @@ export default function SuperAdmin() {
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                           {cs.map(c => {
-                            const dueno  = c.usuarios
+                            const dueno  = c.dueno
                             const activo = dueno?.activo ?? true
                             return (
                               <tr key={c.id} className={`hover:bg-gray-50 transition-colors ${!activo ? 'opacity-50' : ''}`}>
