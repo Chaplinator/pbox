@@ -16,17 +16,14 @@ export default function SuperAdmin() {
   const [stats, setStats]       = useState({})
   const [loading, setLoading]   = useState(true)
   const [expandido, setExpandido] = useState(null)
-  const [usuarios, setUsuarios] = useState({})
+  const [clientes, setClientes] = useState({})
+  const [saving, setSaving]     = useState(null)
 
   const cargar = useCallback(async () => {
     setLoading(true)
-    const { data: bs } = await supabase
-      .from('bodegas')
-      .select('*')
-      .order('created_at')
+    const { data: bs } = await supabase.from('bodegas').select('*').order('created_at')
     setBodegas(bs ?? [])
 
-    // Stats por bodega
     if (bs?.length) {
       const statsMap = {}
       await Promise.all(bs.map(async b => {
@@ -44,29 +41,38 @@ export default function SuperAdmin() {
 
   useEffect(() => { cargar() }, [cargar])
 
-  async function cargarUsuariosBodega(bodegaId) {
-    if (usuarios[bodegaId]) return
+  async function cargarClientesBodega(bodegaId) {
     const { data } = await supabase
-      .from('usuarios')
-      .select('id, nombre, apellido, email, rol, activo, created_at')
+      .from('clientes')
+      .select(`
+        id, nombre_negocio, m2_contratados, created_at,
+        usuarios!inner ( id, nombre, apellido, email, activo )
+      `)
       .eq('bodega_id', bodegaId)
-      .order('rol')
-    setUsuarios(u => ({ ...u, [bodegaId]: data ?? [] }))
-  }
-
-  async function toggleBodega(b) {
-    await supabase.from('bodegas').update({ activo: !b.activo }).eq('id', b.id)
-    cargar()
+      .order('created_at')
+    setClientes(c => ({ ...c, [bodegaId]: data ?? [] }))
   }
 
   function abrir(id) {
     const next = expandido === id ? null : id
     setExpandido(next)
-    if (next) cargarUsuariosBodega(next)
+    if (next) cargarClientesBodega(next)
+  }
+
+  async function toggleCliente(bodegaId, clienteId, usuarioId, activo) {
+    setSaving(clienteId)
+    // Desactivar/activar el usuario dueño + todos sus sub-usuarios
+    await supabase
+      .from('usuarios')
+      .update({ activo: !activo })
+      .or(`id.eq.${usuarioId},cliente_id.eq.${clienteId}`)
+    setSaving(null)
+    cargarClientesBodega(bodegaId)
+    cargar()
   }
 
   const totalStats = {
-    bodegas:  bodegas.length,
+    bodegas:  bodegas.filter(b => b.activo).length,
     clientes: Object.values(stats).reduce((s, v) => s + v.clientes, 0),
     pedidos:  Object.values(stats).reduce((s, v) => s + v.pedidos,  0),
     usuarios: Object.values(stats).reduce((s, v) => s + v.usuarios, 0),
@@ -79,15 +85,13 @@ export default function SuperAdmin() {
         <p className="text-gray-500 text-sm mt-0.5">Vista global de todas las bodegas de P-Box</p>
       </div>
 
-      {/* KPIs globales */}
       <div className="grid grid-cols-4 gap-4 mb-8">
-        <KpiCard label="Bodegas activas"  value={bodegas.filter(b => b.activo).length} variant="blue" />
+        <KpiCard label="Bodegas activas"  value={totalStats.bodegas}  variant="blue" />
         <KpiCard label="Total clientes"   value={totalStats.clientes} />
-        <KpiCard label="Total pedidos"    value={totalStats.pedidos} />
+        <KpiCard label="Total pedidos"    value={totalStats.pedidos}  />
         <KpiCard label="Total usuarios"   value={totalStats.usuarios} />
       </div>
 
-      {/* Lista de bodegas */}
       {loading ? (
         <div className="text-center py-16 text-gray-400 text-sm">Cargando…</div>
       ) : (
@@ -95,31 +99,30 @@ export default function SuperAdmin() {
           {bodegas.map(b => {
             const s    = stats[b.id] ?? {}
             const open = expandido === b.id
-            const us   = usuarios[b.id] ?? []
+            const cs   = clientes[b.id] ?? []
 
             return (
-              <div key={b.id} className={`bg-white rounded-xl border overflow-hidden transition-colors ${!b.activo ? 'opacity-60 border-gray-100' : 'border-gray-200'}`}>
+              <div key={b.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                {/* Cabecera bodega */}
                 <button onClick={() => abrir(b.id)}
                   className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900">{b.nombre}</p>
-                        <span className="text-xs font-mono text-gray-400">/{b.slug}</span>
-                        {!b.activo && (
-                          <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">Inactiva</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Plan: <span className="font-medium text-gray-600">{b.plan}</span>
-                        {b.plan_vence_at && ` · Vence: ${new Date(b.plan_vence_at).toLocaleDateString('es-EC')}`}
-                      </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-gray-900">{b.nombre}</p>
+                      <span className="text-xs font-mono text-gray-400">/{b.slug}</span>
+                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{b.plan}</span>
+                      {!b.activo && (
+                        <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">Inactiva</span>
+                      )}
                     </div>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Creada: {new Date(b.created_at).toLocaleDateString('es-EC')}
+                    </p>
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-center">
                       <p className="text-lg font-bold text-gray-800">{s.clientes ?? '—'}</p>
-                      <p className="text-xs text-gray-400">Clientes</p>
+                      <p className="text-xs text-gray-400">Empresas</p>
                     </div>
                     <div className="text-center">
                       <p className="text-lg font-bold text-gray-800">{s.pedidos ?? '—'}</p>
@@ -133,61 +136,62 @@ export default function SuperAdmin() {
                   </div>
                 </button>
 
+                {/* Tabla de clientes (empresas) */}
                 {open && (
-                  <div className="border-t border-gray-100 px-5 pb-5">
-                    <div className="flex items-center justify-between mt-4 mb-3">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Usuarios</p>
-                      <button onClick={() => toggleBodega(b)}
-                        className={`text-xs px-2 py-1 rounded-lg transition-colors ${b.activo ? 'text-red-500 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}>
-                        {b.activo ? 'Desactivar bodega' : 'Activar bodega'}
-                      </button>
-                    </div>
-
-                    {us.length === 0 ? (
-                      <p className="text-xs text-gray-400">Sin usuarios registrados.</p>
+                  <div className="border-t border-gray-100">
+                    {cs.length === 0 ? (
+                      <p className="px-5 py-4 text-sm text-gray-400">Sin clientes registrados.</p>
                     ) : (
                       <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-xs text-gray-400 border-b border-gray-100">
-                            <th className="text-left pb-2">Nombre</th>
-                            <th className="text-left pb-2">Email</th>
-                            <th className="text-left pb-2">Rol</th>
-                            <th className="text-left pb-2">Estado</th>
-                            <th className="text-left pb-2">Registro</th>
+                        <thead className="bg-gray-50 border-b border-gray-100">
+                          <tr className="text-xs text-gray-400">
+                            <th className="text-left px-5 py-3 font-semibold uppercase tracking-wide">Empresa</th>
+                            <th className="text-left px-4 py-3 font-semibold uppercase tracking-wide">Dueño</th>
+                            <th className="text-left px-4 py-3 font-semibold uppercase tracking-wide">Email</th>
+                            <th className="text-right px-4 py-3 font-semibold uppercase tracking-wide">m² contratados</th>
+                            <th className="text-left px-4 py-3 font-semibold uppercase tracking-wide">Estado</th>
+                            <th className="px-4 py-3" />
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                          {us.map(u => (
-                            <tr key={u.id}>
-                              <td className="py-2 font-medium text-gray-800">{[u.nombre, u.apellido].filter(Boolean).join(' ')}</td>
-                              <td className="py-2 text-gray-500 text-xs">{u.email}</td>
-                              <td className="py-2">
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                                  u.rol === 'master'   ? 'bg-brand-100 text-brand-700' :
-                                  u.rol === 'operador' ? 'bg-blue-100 text-blue-700' :
-                                                         'bg-gray-100 text-gray-600'
-                                }`}>{u.rol}</span>
-                              </td>
-                              <td className="py-2">
-                                {u.activo
-                                  ? <span className="text-xs text-green-600">Activo</span>
-                                  : <span className="text-xs text-red-500">Inactivo</span>
-                                }
-                              </td>
-                              <td className="py-2 text-xs text-gray-400">
-                                {new Date(u.created_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })}
-                              </td>
-                            </tr>
-                          ))}
+                          {cs.map(c => {
+                            const dueno  = c.usuarios
+                            const activo = dueno?.activo ?? true
+                            return (
+                              <tr key={c.id} className={`hover:bg-gray-50 transition-colors ${!activo ? 'opacity-50' : ''}`}>
+                                <td className="px-5 py-3 font-medium text-gray-900">
+                                  {c.nombre_negocio ?? '—'}
+                                </td>
+                                <td className="px-4 py-3 text-gray-600">
+                                  {[dueno?.nombre, dueno?.apellido].filter(Boolean).join(' ') || '—'}
+                                </td>
+                                <td className="px-4 py-3 text-gray-400 text-xs">{dueno?.email}</td>
+                                <td className="px-4 py-3 text-right text-gray-600">{c.m2_contratados} m²</td>
+                                <td className="px-4 py-3">
+                                  {activo
+                                    ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Activo</span>
+                                    : <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-semibold">Suspendido</span>
+                                  }
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <button
+                                    disabled={saving === c.id}
+                                    onClick={() => toggleCliente(b.id, c.id, dueno?.id, activo)}
+                                    className={`text-xs px-3 py-1 rounded-lg transition-colors disabled:opacity-50 ${
+                                      activo
+                                        ? 'text-red-500 hover:bg-red-50 border border-red-200'
+                                        : 'text-green-600 hover:bg-green-50 border border-green-200'
+                                    }`}
+                                  >
+                                    {saving === c.id ? '…' : activo ? 'Suspender' : 'Activar'}
+                                  </button>
+                                </td>
+                              </tr>
+                            )
+                          })}
                         </tbody>
                       </table>
                     )}
-
-                    <div className="mt-4 pt-3 border-t border-gray-50 grid grid-cols-3 gap-3 text-xs text-gray-400">
-                      <div>ID: <span className="font-mono text-gray-500">{b.id.slice(0, 8)}…</span></div>
-                      <div>Color: <span className="font-mono" style={{ color: b.color_marca }}>{b.color_marca}</span></div>
-                      <div>Creada: {new Date(b.created_at).toLocaleDateString('es-EC')}</div>
-                    </div>
                   </div>
                 )}
               </div>
