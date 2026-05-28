@@ -6,6 +6,7 @@ import AppShell from '@/components/layout/AppShell'
 import Login from '@/pages/auth/Login'
 import Registro from '@/pages/auth/Registro'
 import Recovery from '@/pages/auth/Recovery'
+import Track from '@/pages/public/Track'
 import Dashboard from '@/pages/cliente/Dashboard'
 import Inventario from '@/pages/cliente/Inventario'
 import Pedidos from '@/pages/cliente/Pedidos'
@@ -24,6 +25,8 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Registro />} />
           <Route path="/recovery" element={<Recovery />} />
+          <Route path="/track" element={<Track />} />
+          <Route path="/track/:numero" element={<Track />} />
 
           {/* Rutas protegidas — cualquier usuario autenticado */}
           <Route element={<ProtectedRoute />}>

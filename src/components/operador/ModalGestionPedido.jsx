@@ -102,6 +102,14 @@ export default function ModalGestionPedido({ pedido, onClose, onActualizado }) {
           <div>
             <p className="text-xs text-gray-400 mb-0.5">{pedido.cliente_nombre} · {fecha}</p>
             <h2 className="font-bold text-gray-900 text-lg">{pedido.numero_pedido}</h2>
+            <a
+              href={`/track/${pedido.numero_pedido}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-brand-500 hover:underline"
+            >
+              Ver tracking público →
+            </a>
           </div>
           <div className="flex items-center gap-3">
             <EstadoBadge estado={pedido.estado} />
