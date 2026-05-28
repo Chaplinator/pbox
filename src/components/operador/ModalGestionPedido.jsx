@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '@/supabase/client'
 import { alertaPedido } from '@/utils/alertas'
+import { imprimirRemision } from '@/utils/remision'
 
 const ESTADOS = {
   recibido:   { label: 'Recibido',   bg: 'bg-blue-100',   text: 'text-blue-700'   },
@@ -113,6 +114,14 @@ export default function ModalGestionPedido({ pedido, onClose, onActualizado }) {
           </div>
           <div className="flex items-center gap-3">
             <EstadoBadge estado={pedido.estado} />
+            {['despachado','entregado'].includes(pedido.estado) && (
+              <button
+                onClick={() => imprimirRemision(pedido)}
+                className="px-3 py-1 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Remisión PDF
+              </button>
+            )}
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
           </div>
         </div>
