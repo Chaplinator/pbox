@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/supabase/client'
 
@@ -281,7 +281,138 @@ export default function Perfil() {
             </label>
           </div>
         </SectionCard>
+
+        {/* Mi equipo */}
+        <EquipoSection clienteId={clienteId} perfilId={perfil?.id} bodegaId={perfil?.bodega_id} />
       </div>
+    </div>
+  )
+}
+
+function EquipoSection({ clienteId, perfilId, bodegaId }) {
+  const [miembros, setMiembros]   = useState([])
+  const [loading, setLoading]     = useState(false)
+  const [form, setForm]           = useState({ email: '', nombre: '', apellido: '' })
+  const [inviting, setInviting]   = useState(false)
+  const [inviteOk, setInviteOk]   = useState(false)
+  const [error, setError]         = useState('')
+  const [showForm, setShowForm]   = useState(false)
+
+  const cargar = useCallback(async () => {
+    if (!clienteId) return
+    setLoading(true)
+    const { data } = await supabase
+      .from('usuarios')
+      .select('id, nombre, apellido, email, created_at')
+      .eq('cliente_id', clienteId)
+    setMiembros(data ?? [])
+    setLoading(false)
+  }, [clienteId])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  async function invitar(e) {
+    e.preventDefault()
+    setError(''); setInviting(true); setInviteOk(false)
+    const { data, error: err } = await supabase.functions.invoke('invite-subusuario', {
+      body: { email: form.email, nombre: form.nombre, apellido: form.apellido, cliente_id: clienteId, bodega_id: bodegaId },
+    })
+    setInviting(false)
+    if (err || data?.error) { setError(data?.error ?? err.message); return }
+    setInviteOk(true)
+    setForm({ email: '', nombre: '', apellido: '' })
+    setShowForm(false)
+    setTimeout(() => setInviteOk(false), 4000)
+    cargar()
+  }
+
+  async function revocarAcceso(usuario) {
+    if (!confirm(`¿Revocar el acceso de ${usuario.nombre} a este negocio?`)) return
+    await supabase.from('usuarios').update({ cliente_id: null }).eq('id', usuario.id)
+    cargar()
+  }
+
+  if (!clienteId) return null
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <h2 className="font-semibold text-gray-900">Mi equipo</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Personas con acceso a tu inventario y pedidos</p>
+        </div>
+        {!showForm && (
+          <button onClick={() => setShowForm(true)}
+            className="px-3 py-1.5 text-xs bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors font-medium">
+            + Invitar miembro
+          </button>
+        )}
+      </div>
+
+      {/* Formulario de invitación */}
+      {showForm && (
+        <form onSubmit={invitar} className="bg-brand-50 border border-brand-200 rounded-xl p-4 mb-5 space-y-3">
+          <p className="text-xs font-semibold text-brand-700">Enviar invitación por email</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>Nombre *</label>
+              <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+                required className={inp} placeholder="Ana" />
+            </div>
+            <div>
+              <label className={lbl}>Apellido</label>
+              <input value={form.apellido} onChange={e => setForm(f => ({ ...f, apellido: e.target.value }))}
+                className={inp} placeholder="Torres" />
+            </div>
+            <div className="col-span-2">
+              <label className={lbl}>Correo electrónico *</label>
+              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                required className={inp} placeholder="ana@negocio.com" />
+            </div>
+          </div>
+          {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => { setShowForm(false); setError('') }}
+              className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" disabled={inviting}
+              className="px-4 py-1.5 text-xs bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors font-medium">
+              {inviting ? 'Enviando…' : 'Enviar invitación'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {inviteOk && (
+        <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-sm text-green-700">
+          Invitación enviada. El usuario recibirá un email para activar su cuenta.
+        </div>
+      )}
+
+      {/* Lista de miembros */}
+      {loading ? (
+        <p className="text-xs text-gray-400">Cargando…</p>
+      ) : miembros.length === 0 ? (
+        <p className="text-sm text-gray-400">Aún no hay miembros en tu equipo.</p>
+      ) : (
+        <div className="divide-y divide-gray-100">
+          {miembros.map(m => (
+            <div key={m.id} className="flex items-center justify-between py-3">
+              <div>
+                <p className="text-sm font-medium text-gray-800">
+                  {[m.nombre, m.apellido].filter(Boolean).join(' ')}
+                </p>
+                <p className="text-xs text-gray-400">{m.email}</p>
+              </div>
+              <button onClick={() => revocarAcceso(m)}
+                className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+                Revocar acceso
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

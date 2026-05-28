@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/supabase/client'
 
@@ -7,23 +7,36 @@ const lbl = 'block text-sm font-medium text-gray-700 mb-1'
 
 export default function Recovery() {
   const navigate = useNavigate()
-  const [ready, setReady]       = useState(false)
-  const [form, setForm]         = useState({ password: '', confirmar: '' })
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
-  const [done, setDone]         = useState(false)
+  // Capturar el tipo antes de que Supabase borre el hash
+  const isInvite    = useRef(window.location.hash.includes('type=invite'))
+  const isCallback  = useRef(window.location.hash.includes('access_token'))
+
+  const [ready, setReady]     = useState(false)
+  const [form, setForm]       = useState({ password: '', confirmar: '' })
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
+  const [done, setDone]       = useState(false)
 
   useEffect(() => {
+    // Si no viene con token en el hash, el enlace es inválido
+    if (!isCallback.current) { setReady('invalid'); return }
+
+    const readySet = { current: false }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true)
+      if (session && !readySet.current) { readySet.current = true; setReady(true) }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReady(true)
+      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && !readySet.current) {
+        readySet.current = true
+        setReady(true)
+      }
     })
 
-    // Si en 8 segundos no llega el evento, el enlace es inválido o expiró
-    const timeout = setTimeout(() => setReady('invalid'), 8000)
+    const timeout = setTimeout(() => {
+      if (!readySet.current) setReady('invalid')
+    }, 8000)
 
     return () => { subscription.unsubscribe(); clearTimeout(timeout) }
   }, [])
@@ -37,7 +50,6 @@ export default function Recovery() {
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ password: form.password })
     setLoading(false)
-
     if (error) { setError(error.message); return }
     setDone(true)
     setTimeout(() => navigate('/inventario'), 2500)
@@ -48,8 +60,8 @@ export default function Recovery() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <p className="text-2xl font-bold text-brand-700 mb-2">P-Box</p>
-          <p className="text-green-600 font-medium">Contraseña actualizada correctamente.</p>
-          <p className="text-gray-400 text-sm mt-1">Redirigiendo…</p>
+          <p className="text-green-600 font-medium">Contraseña establecida correctamente.</p>
+          <p className="text-gray-400 text-sm mt-1">Ingresando a tu cuenta…</p>
         </div>
       </div>
     )
@@ -61,8 +73,11 @@ export default function Recovery() {
         <div className="text-center max-w-sm">
           <p className="text-2xl font-bold text-brand-700 mb-4">P-Box</p>
           <p className="text-gray-700 font-medium mb-1">Enlace inválido o expirado</p>
-          <p className="text-gray-400 text-sm mb-6">El enlace de recuperación ya fue usado o expiró. Solicita uno nuevo.</p>
-          <a href="/login" className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
+          <p className="text-gray-400 text-sm mb-6">
+            El enlace ya fue usado o expiró. Solicita uno nuevo.
+          </p>
+          <a href="/login"
+            className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
             Volver al inicio de sesión
           </a>
         </div>
@@ -75,7 +90,7 @@ export default function Recovery() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <p className="text-2xl font-bold text-brand-700 mb-4">P-Box</p>
-          <p className="text-gray-400 text-sm">Verificando enlace de recuperación…</p>
+          <p className="text-gray-400 text-sm">Verificando enlace…</p>
         </div>
       </div>
     )
@@ -86,15 +101,21 @@ export default function Recovery() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-brand-700">P-Box</h1>
-          <p className="text-gray-500 text-sm mt-1">Establece tu nueva contraseña</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {isInvite.current ? 'Establece tu contraseña para activar tu cuenta' : 'Establece tu nueva contraseña'}
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Nueva contraseña</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">
+            {isInvite.current ? 'Activar cuenta' : 'Nueva contraseña'}
+          </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className={lbl}>Nueva contraseña *</label>
+              <label className={lbl}>
+                {isInvite.current ? 'Crea tu contraseña *' : 'Nueva contraseña *'}
+              </label>
               <input type="password" value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                 required minLength={6} className={inp} placeholder="Mínimo 6 caracteres" />
@@ -110,7 +131,10 @@ export default function Recovery() {
 
             <button type="submit" disabled={loading}
               className="w-full bg-brand-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors">
-              {loading ? 'Actualizando…' : 'Actualizar contraseña'}
+              {loading
+                ? 'Guardando…'
+                : isInvite.current ? 'Activar cuenta' : 'Actualizar contraseña'
+              }
             </button>
           </form>
         </div>
