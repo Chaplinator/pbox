@@ -26,8 +26,10 @@ const VACIO_DEST = {
 export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) {
   const { perfil } = useAuth()
   const [productos, setProductos]         = useState([])
+  const [canastas, setCanastas]           = useState([])
   const [destinatarios, setDestinatarios] = useState([])
   const [items, setItems]                 = useState([{ producto_id: '', cantidad: 1 }])
+  const [canastasItems, setCanastasItems] = useState([])
   const [dest, setDest]                   = useState(VACIO_DEST)
   const [guardarDest, setGuardarDest]     = useState(false)
   const [saving, setSaving]               = useState(false)
@@ -39,6 +41,7 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
     if (!open || !clienteId) return
     setError('')
     setItems([{ producto_id: '', cantidad: 1 }])
+    setCanastasItems([])
     setDest(VACIO_DEST)
     setGuardarDest(false)
     setBusqDest('')
@@ -47,17 +50,19 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
     supabase
       .from('vista_inventario')
       .select('producto_id, sku, nombre, cantidad')
-      .eq('cliente_id', clienteId)
-      .eq('activo', true)
-      .gt('cantidad', 0)
-      .order('nombre')
+      .eq('cliente_id', clienteId).eq('activo', true).gt('cantidad', 0).order('nombre')
       .then(({ data }) => setProductos(data ?? []))
+
+    supabase
+      .from('vista_canastas')
+      .select('id, nombre, kits_disponibles, num_componentes')
+      .eq('cliente_id', clienteId).eq('activo', true).order('nombre')
+      .then(({ data }) => setCanastas(data ?? []))
 
     supabase
       .from('destinatarios')
       .select('*')
-      .eq('cliente_id', clienteId)
-      .order('apellidos')
+      .eq('cliente_id', clienteId).order('apellidos')
       .then(({ data }) => setDestinatarios(data ?? []))
   }, [open, clienteId])
 
@@ -98,9 +103,33 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
     )
   })
 
+  function setCanastaItem(i, field, val) {
+    setCanastasItems(p => p.map((it, idx) => idx === i ? { ...it, [field]: val } : it))
+  }
+
+  async function expandirCanastas() {
+    const validas = canastasItems.filter(it => it.canasta_id && Number(it.cantidad) > 0)
+    if (!validas.length) return []
+    const ids = validas.map(it => it.canasta_id)
+    const { data: componentes } = await supabase
+      .from('items_canasta')
+      .select('canasta_id, producto_id, cantidad')
+      .in('canasta_id', ids)
+    return validas.flatMap(row =>
+      (componentes ?? [])
+        .filter(c => c.canasta_id === row.canasta_id)
+        .map(c => ({ producto_id: c.producto_id, cantidad: c.cantidad * Number(row.cantidad) }))
+    )
+  }
+
   async function submit(e) {
     e.preventDefault()
-    if (items.some(it => !it.producto_id)) { setError('Selecciona un producto en cada fila.'); return }
+    const tieneProductos = items.some(it => it.producto_id)
+    const tieneCanastas  = canastasItems.some(it => it.canasta_id)
+    if (!tieneProductos && !tieneCanastas) { setError('Agrega al menos un producto o canasta.'); return }
+    if (items.some(it => it.producto_id === '' && items.length > 1)) {
+      setError('Hay filas de productos vacías. Completa o elimínalas.'); return
+    }
     setSaving(true); setError('')
 
     const rand = Math.random().toString(36).slice(2, 5).toUpperCase()
@@ -122,16 +151,24 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
 
     if (e1) { setError(e1.message); setSaving(false); return }
 
-    const { error: e2 } = await supabase
-      .from('items_pedido')
-      .insert(items.map(it => ({
-        pedido_id:   pedido.id,
-        producto_id: it.producto_id,
-        cantidad:    Number(it.cantidad),
-      })))
+    // Expandir canastas y combinar con items individuales
+    const itemsCanasta = await expandirCanastas()
+    const todosItems = [
+      ...items.filter(it => it.producto_id).map(it => ({ producto_id: it.producto_id, cantidad: Number(it.cantidad) })),
+      ...itemsCanasta,
+    ]
+    // Combinar duplicados del mismo producto
+    const merged = {}
+    for (const it of todosItems) {
+      merged[it.producto_id] = (merged[it.producto_id] ?? 0) + it.cantidad
+    }
+    const itemsFinales = Object.entries(merged).map(([producto_id, cantidad]) => ({
+      pedido_id: pedido.id, producto_id, cantidad,
+    }))
+
+    const { error: e2 } = await supabase.from('items_pedido').insert(itemsFinales)
 
     if (e2) {
-      // Limpiar el pedido si la inserción de items falló (ej: stock insuficiente)
       await supabase.from('pedidos').delete().eq('id', pedido.id)
       const msg = e2.message?.includes('Stock insuficiente')
         ? 'Stock insuficiente para uno o más productos. Verifica las cantidades disponibles.'
@@ -178,9 +215,47 @@ export default function ModalNuevoPedido({ open, onClose, clienteId, onSaved }) 
 
         <form onSubmit={submit} className="p-6 space-y-6">
 
+          {/* Canastas */}
+          {canastas.length > 0 && (
+            <div>
+              <p className={sec}>Canastas / Kits</p>
+              <div className="space-y-2">
+                {canastasItems.map((it, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <div className="flex-1">
+                      <select value={it.canasta_id}
+                        onChange={e => setCanastaItem(i, 'canasta_id', e.target.value)}
+                        className={inp}>
+                        <option value="">Seleccionar canasta…</option>
+                        {canastas.map(c => (
+                          <option key={c.id} value={c.id} disabled={c.kits_disponibles === 0}>
+                            {c.nombre} ({c.kits_disponibles} kits disponibles)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="w-24">
+                      <input type="number" min="1" value={it.cantidad}
+                        onChange={e => setCanastaItem(i, 'cantidad', e.target.value)}
+                        className={inp} placeholder="Cant." />
+                    </div>
+                    <button type="button"
+                      onClick={() => setCanastasItems(p => p.filter((_, idx) => idx !== i))}
+                      className="text-gray-300 hover:text-red-400 text-xl leading-none">×</button>
+                  </div>
+                ))}
+              </div>
+              <button type="button"
+                onClick={() => setCanastasItems(p => [...p, { canasta_id: '', cantidad: 1 }])}
+                className="mt-2 text-xs text-brand-600 hover:underline font-medium">
+                + Agregar canasta
+              </button>
+            </div>
+          )}
+
           {/* Productos */}
           <div>
-            <p className={sec}>Productos</p>
+            <p className={sec}>Productos individuales</p>
             <div className="space-y-2">
               {items.map((it, i) => (
                 <div key={i} className="flex gap-2 items-start">

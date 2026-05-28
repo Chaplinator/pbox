@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext'
 const navCliente = [
   { to: '/inventario',    label: 'Inventario'    },
   { to: '/pedidos',       label: 'Mis Pedidos'   },
+  { to: '/canastas',      label: 'Canastas'      },
   { to: '/ingresos',      label: 'Ingresos'      },
   { to: '/destinatarios', label: 'Destinatarios' },
   { to: '/perfil',        label: 'Mi Perfil'     },
@@ -78,6 +79,17 @@ export default function AppShell() {
             <span className="block px-3 mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
               {perfil.rol}
             </span>
+          )}
+          {perfil?.rol === 'master' && (
+            <NavLink to="/admin"
+              className={({ isActive }) =>
+                `flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-1 ${
+                  isActive ? 'bg-brand-50 text-brand-700' : 'text-gray-500 hover:bg-gray-100'
+                }`
+              }
+            >
+              Super Admin
+            </NavLink>
           )}
           <button
             onClick={handleSignOut}

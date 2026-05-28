@@ -15,6 +15,8 @@ import Destinatarios from '@/pages/cliente/Destinatarios'
 import Ingresos from '@/pages/cliente/Ingresos'
 import PanelOperativo from '@/pages/operador/PanelOperativo'
 import RecepcionInventario from '@/pages/operador/RecepcionInventario'
+import Canastas from '@/pages/cliente/Canastas'
+import SuperAdmin from '@/pages/admin/SuperAdmin'
 import Usuarios from '@/pages/operador/Usuarios'
 import Reportes from '@/pages/operador/Reportes'
 
@@ -39,6 +41,7 @@ export default function App() {
               <Route path="/perfil" element={<Perfil />} />
               <Route path="/destinatarios" element={<Destinatarios />} />
               <Route path="/ingresos" element={<Ingresos />} />
+              <Route path="/canastas" element={<Canastas />} />
             </Route>
           </Route>
 
@@ -49,6 +52,7 @@ export default function App() {
               <Route path="/operador/usuarios" element={<Usuarios />} />
               <Route path="/operador/reportes" element={<Reportes />} />
               <Route path="/operador/recepcion" element={<RecepcionInventario />} />
+              <Route path="/admin" element={<SuperAdmin />} />
             </Route>
           </Route>
 
