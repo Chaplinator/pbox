@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/supabase/client'
 
+const M2_BASE = { basico: 10, pro: 20, enterprise: 0 }
+
 const PLANES = {
   basico: {
     nombre: 'Básico',
@@ -42,6 +44,104 @@ const PLANES = {
     },
     color: 'brand',
   },
+}
+
+function ModalVenderM2({ open, onClose, clienteId, m2Actual, plan, onSaved }) {
+  const [cantidad, setCantidad] = useState(5)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const m2Minimo = M2_BASE[plan] || 0
+  const m2Disponible = m2Actual - m2Minimo
+
+  const precioM2 = 2
+  const totalRecupero = cantidad * precioM2
+
+  async function guardar(e) {
+    e.preventDefault()
+    if (!cantidad || cantidad <= 0) { setError('Ingresa una cantidad válida.'); return }
+    if (cantidad > m2Disponible) {
+      setError(`Solo puedes devolver ${m2Disponible} m² (mínimo del plan: ${m2Minimo} m²).`);
+      return
+    }
+    setSaving(true); setError('')
+
+    const nuevoTotal = m2Actual - cantidad
+    const { error: err } = await supabase.from('clientes')
+      .update({ m2_contratados: nuevoTotal })
+      .eq('id', clienteId)
+
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+  }
+
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="font-semibold text-gray-900">Devolver m²</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+        <form onSubmit={guardar} className="p-6 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-2">
+              m² a devolver
+            </label>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <input type="number" min="1" step="1" max={m2Disponible} value={cantidad}
+                  onChange={e => setCantidad(Math.min(Number(e.target.value), m2Disponible))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  placeholder="Cantidad" />
+              </div>
+              <span className="text-sm text-gray-500 pb-2">${precioM2}/m²</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Disponibles para devolver: <strong>{m2Disponible} m²</strong> (mínimo del plan: {m2Minimo} m²)
+            </p>
+          </div>
+
+          <div className="bg-green-50 rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">m² actual:</span>
+              <span className="font-semibold text-gray-900">{m2Actual} m²</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Devolución:</span>
+              <span className="font-semibold text-gray-900">− {cantidad} m²</span>
+            </div>
+            <div className="border-t border-green-200 pt-2 flex items-center justify-between text-sm font-semibold">
+              <span className="text-gray-900">Total nuevo:</span>
+              <span className="text-brand-700">{m2Actual - cantidad} m²</span>
+            </div>
+            <div className="border-t border-green-200 pt-2 flex items-center justify-between">
+              <span className="text-gray-600 text-sm">Te reembolsamos:</span>
+              <span className="text-2xl font-bold text-green-600">${totalRecupero}</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-500 bg-blue-50 px-3 py-2 rounded-lg">
+            💳 El reembolso se procesará según el método de pago registrado en tu cuenta.
+          </p>
+
+          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving || cantidad === 0}
+              className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
+              {saving ? 'Procesando…' : `Devolver por $${totalRecupero}`}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
 }
 
 function ModalComprarM2({ open, onClose, clienteId, m2Actual, onSaved }) {
@@ -224,6 +324,7 @@ export default function Planes() {
   const [loading, setLoading] = useState(true)
   const [modalPlan, setModalPlan] = useState(false)
   const [modalM2, setModalM2] = useState(false)
+  const [modalVender, setModalVender] = useState(false)
 
   useEffect(() => {
     if (!perfil) return
@@ -282,10 +383,16 @@ export default function Planes() {
             <h3 className="text-2xl font-bold text-gray-900 mt-1">{cliente.m2_contratados} m²</h3>
             <p className="text-gray-500 text-sm mt-1">Espacio disponible para tu inventario</p>
           </div>
-          <button onClick={() => setModalM2(true)}
-            className="px-4 py-2 text-sm bg-brand-100 text-brand-700 rounded-lg hover:bg-brand-200 transition-colors font-medium">
-            Comprar m²
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setModalVender(true)}
+              className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+              Devolver m²
+            </button>
+            <button onClick={() => setModalM2(true)}
+              className="px-4 py-2 text-sm bg-brand-100 text-brand-700 rounded-lg hover:bg-brand-200 transition-colors font-medium">
+              Comprar m²
+            </button>
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -355,6 +462,15 @@ export default function Planes() {
         clienteId={cliente.id}
         m2Actual={cliente.m2_contratados}
         onSaved={() => { setModalM2(false); cargarCliente() }}
+      />
+
+      <ModalVenderM2
+        open={modalVender}
+        onClose={() => setModalVender(false)}
+        clienteId={cliente.id}
+        m2Actual={cliente.m2_contratados}
+        plan={cliente.plan}
+        onSaved={() => { setModalVender(false); cargarCliente() }}
       />
     </div>
   )
