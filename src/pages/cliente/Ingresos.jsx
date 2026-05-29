@@ -78,40 +78,31 @@ function ModalNuevoIngreso({ open, onClose, clienteId, onSaved }) {
           <div className="space-y-2">
             {items.map((it, i) => (
               <div key={i} className="flex gap-2 items-start">
-                <div className="flex-1">
-                  <select value={it.producto_id}
-                    onChange={e => setItem(i, 'producto_id', e.target.value)}
-                    className={inp} required>
-                    <option value="">Seleccionar producto…</option>
-                    {productos.map(p => (
-                      <option key={p.producto_id} value={p.producto_id}>
-                        {p.sku} — {p.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="w-24">
-                  <input type="number" min="1" value={it.cantidad_enviada}
-                    onChange={e => setItem(i, 'cantidad_enviada', e.target.value)}
-                    className={inp} required />
-                </div>
+                <select value={it.producto_id} onChange={e => setItem(i, 'producto_id', e.target.value)}
+                  className={inp} required>
+                  <option value="">Seleccionar producto…</option>
+                  {productos.map(p => (
+                    <option key={p.producto_id} value={p.producto_id}>
+                      {p.sku} — {p.nombre}
+                    </option>
+                  ))}
+                </select>
+                <input type="number" min="1" value={it.cantidad_enviada}
+                  onChange={e => setItem(i, 'cantidad_enviada', e.target.value)}
+                  className={inp.replace('w-full', 'w-24')} placeholder="Cant." required />
                 {items.length > 1 && (
-                  <button type="button"
-                    onClick={() => setItems(p => p.filter((_, idx) => idx !== i))}
+                  <button type="button" onClick={() => setItems(p => p.filter((_, idx) => idx !== i))}
                     className="mt-1 text-gray-300 hover:text-red-400 text-xl leading-none">×</button>
                 )}
               </div>
             ))}
           </div>
-          <button type="button"
-            onClick={() => setItems(p => [...p, { producto_id: '', cantidad_enviada: 1 }])}
-            className="text-xs text-brand-600 hover:underline font-medium">
-            + Agregar otro producto
-          </button>
+          <button type="button" onClick={() => setItems(p => [...p, { producto_id: '', cantidad_enviada: 1 }])}
+            className="text-xs text-brand-600 hover:underline font-medium">+ Agregar producto</button>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Notas para P-Box</label>
-            <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2}
-              className={inp + ' resize-none'} placeholder="Embalaje, fecha estimada de envío, etc." />
+            <label className="block text-xs font-medium text-gray-600 mb-1">Notas (opcional)</label>
+            <textarea value={notas} onChange={e => setNotas(e.target.value)}
+              className={inp + ' resize-none'} rows="2" placeholder="Observaciones…" />
           </div>
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
@@ -121,7 +112,7 @@ function ModalNuevoIngreso({ open, onClose, clienteId, onSaved }) {
             </button>
             <button type="submit" disabled={saving}
               className="px-4 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors">
-              {saving ? 'Enviando…' : 'Notificar ingreso'}
+              {saving ? 'Guardando…' : 'Notificar ingreso'}
             </button>
           </div>
         </form>
@@ -134,9 +125,11 @@ export default function Ingresos() {
   const { perfil } = useAuth()
   const [clienteId, setClienteId]   = useState(null)
   const [ingresos, setIngresos]     = useState([])
+  const [salidas, setSalidas]       = useState([])
   const [loading, setLoading]       = useState(true)
-  const [modalOpen, setModalOpen]   = useState(false)
   const [expandido, setExpandido]   = useState(null)
+  const [modalOpen, setModalOpen]   = useState(false)
+  const [tab, setTab]               = useState('ingresos')
 
   useEffect(() => {
     if (!perfil) return
@@ -147,102 +140,211 @@ export default function Ingresos() {
   const cargar = useCallback(async () => {
     if (!clienteId) return
     setLoading(true)
-    const { data } = await supabase
+
+    // Cargar ingresos
+    const { data: ingresosData } = await supabase
       .from('ingresos_inventario')
       .select(`*, items_ingreso(cantidad_enviada, cantidad_recibida, productos(nombre, sku))`)
       .eq('cliente_id', clienteId)
       .order('created_at', { ascending: false })
-    setIngresos(data ?? [])
+    setIngresos(ingresosData ?? [])
+
+    // Cargar salidas (movimientos de tipo salida)
+    const { data: salidasData } = await supabase
+      .from('movimientos_inventario')
+      .select(`
+        id, tipo, cantidad, razon, created_at,
+        producto_id, productos(nombre, sku),
+        usuario_id, usuarios(nombre, apellido, email)
+      `)
+      .eq('cliente_id', clienteId)
+      .eq('tipo', 'salida')
+      .order('created_at', { ascending: false })
+
+    // Agrupar salidas por pedido/razon
+    const salidasAgrupadas = {}
+    for (const s of (salidasData ?? [])) {
+      const key = s.razon || s.id
+      if (!salidasAgrupadas[key]) {
+        salidasAgrupadas[key] = {
+          razon: s.razon,
+          usuario: s.usuarios,
+          created_at: s.created_at,
+          items: [],
+        }
+      }
+      salidasAgrupadas[key].items.push({ cantidad: s.cantidad, producto: s.productos })
+    }
+    setSalidas(Object.values(salidasAgrupadas))
     setLoading(false)
   }, [clienteId])
 
   useEffect(() => { cargar() }, [cargar])
 
+  const ContenidoVacio = ({ texto }) => (
+    <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+      <p className="text-gray-400 text-sm">{texto}</p>
+    </div>
+  )
+
   return (
     <div className="p-8">
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ingreso de inventario</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Notifica a P-Box cuando envíes productos para almacenamiento</p>
+          <h1 className="text-2xl font-bold text-gray-900">Movimientos de inventario</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Registro de ingresos y salidas de tu inventario</p>
         </div>
-        <button onClick={() => setModalOpen(true)}
-          className="px-4 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors font-medium">
-          + Notificar ingreso
-        </button>
+        {tab === 'ingresos' && (
+          <button onClick={() => setModalOpen(true)}
+            className="px-4 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors font-medium">
+            + Notificar ingreso
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200">
+        {[
+          { key: 'ingresos', label: 'Ingresos' },
+          { key: 'salidas',  label: 'Salidas (Pedidos)' },
+        ].map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              tab === t.key
+                ? 'border-brand-500 text-brand-700'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {loading ? (
         <div className="text-center py-16 text-gray-400 text-sm">Cargando…</div>
-      ) : ingresos.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-gray-400 text-sm">Aún no has notificado ningún ingreso.</p>
-          <button onClick={() => setModalOpen(true)}
-            className="mt-4 px-4 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors">
-            Notificar mi primer ingreso
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {ingresos.map(ing => {
-            const fecha = new Date(ing.created_at).toLocaleDateString('es-EC', { day:'2-digit', month:'short', year:'numeric' })
-            const open  = expandido === ing.id
-            return (
-              <div key={ing.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <button
-                  onClick={() => setExpandido(open ? null : ing.id)}
-                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="font-mono text-xs text-gray-400">{ing.numero}</span>
-                    <EstadoBadge estado={ing.estado} />
-                    <span className="text-sm text-gray-600">{ing.items_ingreso?.length} producto(s)</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400">{fecha}</span>
-                    <span className="text-gray-300">{open ? '▲' : '▼'}</span>
-                  </div>
-                </button>
-                {open && (
-                  <div className="px-5 pb-4 border-t border-gray-100">
-                    <table className="w-full text-sm mt-3">
-                      <thead>
-                        <tr className="text-xs text-gray-400">
-                          <th className="text-left pb-2">Producto</th>
-                          <th className="text-left pb-2">SKU</th>
-                          <th className="text-right pb-2">Enviado</th>
-                          <th className="text-right pb-2">Recibido</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {ing.items_ingreso?.map((it, i) => (
-                          <tr key={i}>
-                            <td className="py-2 text-gray-700">{it.productos?.nombre}</td>
-                            <td className="py-2 font-mono text-xs text-gray-400">{it.productos?.sku}</td>
-                            <td className="py-2 text-right text-gray-600">{it.cantidad_enviada}</td>
-                            <td className="py-2 text-right font-semibold">
-                              {it.cantidad_recibida != null
-                                ? <span className="text-green-600">{it.cantidad_recibida}</span>
-                                : <span className="text-gray-300">—</span>
-                              }
-                            </td>
+      ) : tab === 'ingresos' ? (
+        ingresos.length === 0 ? (
+          <ContenidoVacio texto="Aún no has notificado ningún ingreso." />
+        ) : (
+          <div className="space-y-3">
+            {ingresos.map(ing => {
+              const fecha = new Date(ing.created_at).toLocaleDateString('es-EC', { day:'2-digit', month:'short', year:'numeric' })
+              const open  = expandido === ing.id
+              return (
+                <div key={ing.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <button
+                    onClick={() => setExpandido(open ? null : ing.id)}
+                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono text-xs text-gray-400">{ing.numero}</span>
+                      <EstadoBadge estado={ing.estado} />
+                      <span className="text-sm text-gray-600">{ing.items_ingreso?.length} producto(s)</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-gray-400">{fecha}</span>
+                      <span className="text-gray-300">{open ? '▲' : '▼'}</span>
+                    </div>
+                  </button>
+                  {open && (
+                    <div className="px-5 pb-4 border-t border-gray-100">
+                      <table className="w-full text-sm mt-3">
+                        <thead>
+                          <tr className="text-xs text-gray-400">
+                            <th className="text-left pb-2">Producto</th>
+                            <th className="text-left pb-2">SKU</th>
+                            <th className="text-right pb-2">Enviado</th>
+                            <th className="text-right pb-2">Recibido</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {ing.notas && (
-                      <p className="mt-3 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">{ing.notas}</p>
-                    )}
-                    {ing.recibido_at && (
-                      <p className="mt-2 text-xs text-gray-400">
-                        Confirmado el {new Date(ing.recibido_at).toLocaleDateString('es-EC', { day:'2-digit', month:'short', year:'numeric' })}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {ing.items_ingreso?.map((it, i) => (
+                            <tr key={i}>
+                              <td className="py-2 text-gray-700">{it.productos?.nombre}</td>
+                              <td className="py-2 font-mono text-xs text-gray-400">{it.productos?.sku}</td>
+                              <td className="py-2 text-right text-gray-600">{it.cantidad_enviada}</td>
+                              <td className="py-2 text-right font-semibold">
+                                {it.cantidad_recibida != null
+                                  ? <span className="text-green-600">{it.cantidad_recibida}</span>
+                                  : <span className="text-gray-300">—</span>
+                                }
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {ing.notas && (
+                        <p className="mt-3 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">{ing.notas}</p>
+                      )}
+                      {ing.recibido_at && (
+                        <p className="mt-2 text-xs text-gray-400">
+                          Confirmado el {new Date(ing.recibido_at).toLocaleDateString('es-EC', { day:'2-digit', month:'short', year:'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
+      ) : (
+        salidas.length === 0 ? (
+          <ContenidoVacio texto="Aún no hay salidas registradas. Se registran automáticamente cuando creas pedidos." />
+        ) : (
+          <div className="space-y-3">
+            {salidas.map((salida, idx) => {
+              const fecha = new Date(salida.created_at).toLocaleDateString('es-EC', { day:'2-digit', month:'short', year:'numeric' })
+              const open  = expandido === `salida-${idx}`
+              const usuario = salida.usuario ? `${salida.usuario.nombre} ${salida.usuario.apellido}`.trim() : '—'
+              return (
+                <div key={`salida-${idx}`} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <button
+                    onClick={() => setExpandido(open ? null : `salida-${idx}`)}
+                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono text-xs text-gray-400">{salida.razon}</span>
+                      <span className="text-sm text-gray-600">{salida.items.length} producto(s)</span>
+                      <span className="text-xs text-gray-500">Por: {usuario}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-gray-400">{fecha}</span>
+                      <span className="text-gray-300">{open ? '▲' : '▼'}</span>
+                    </div>
+                  </button>
+                  {open && (
+                    <div className="px-5 pb-4 border-t border-gray-100">
+                      <table className="w-full text-sm mt-3">
+                        <thead>
+                          <tr className="text-xs text-gray-400">
+                            <th className="text-left pb-2">Producto</th>
+                            <th className="text-left pb-2">SKU</th>
+                            <th className="text-right pb-2">Cantidad sacada</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {salida.items.map((it, i) => (
+                            <tr key={i}>
+                              <td className="py-2 text-gray-700">{it.producto?.nombre}</td>
+                              <td className="py-2 font-mono text-xs text-gray-400">{it.producto?.sku}</td>
+                              <td className="py-2 text-right font-semibold text-red-600">−{it.cantidad}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {salida.usuario && (
+                        <div className="mt-3 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                          <p><strong>Generado por:</strong> {usuario}</p>
+                          <p><strong>Email:</strong> {salida.usuario.email}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
       )}
 
       <ModalNuevoIngreso
