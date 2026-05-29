@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/supabase/client'
 
 export default function Login() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
@@ -25,7 +27,7 @@ export default function Login() {
     setLoading(false)
 
     if (error) {
-      setError('Credenciales incorrectas. Intenta de nuevo.')
+      setError(t('auth.invalid_credentials'))
     } else {
       navigate('/dashboard')
     }
@@ -40,12 +42,12 @@ export default function Login() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Iniciar sesión</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">{t('auth.login_title')}</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Correo electrónico
+                {t('auth.email')}
               </label>
               <input
                 type="email"
@@ -60,7 +62,7 @@ export default function Login() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contraseña
+                {t('auth.password')}
               </label>
               <input
                 type="password"
@@ -82,14 +84,14 @@ export default function Login() {
               disabled={loading}
               className="w-full bg-brand-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors"
             >
-              {loading ? 'Ingresando…' : 'Ingresar'}
+              {loading ? t('common.loading') : t('auth.login_button')}
             </button>
           </form>
 
           <p className="mt-4 text-center text-sm text-gray-500">
-            ¿No tienes cuenta?{' '}
+            {t('auth.no_account')}{' '}
             <Link to="/registro" className="text-brand-600 hover:underline font-medium">
-              Regístrate
+              {t('auth.registro_button')}
             </Link>
           </p>
         </div>

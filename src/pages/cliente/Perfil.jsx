@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/supabase/client'
 
 const inp = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400'
@@ -30,7 +31,8 @@ function SectionCard({ title, subtitle, children, onSave, saving, saved }) {
 }
 
 export default function Perfil() {
-  const { perfil, setPerfil } = useAuth()
+  const { perfil, setPerfil, changeLanguage } = useAuth()
+  const { t, i18n } = useTranslation()
 
   const [personal, setPersonal]   = useState({ nombre: '', apellido: '', telefono: '' })
   const [negocio, setNegocio]     = useState({
@@ -50,10 +52,14 @@ export default function Perfil() {
   const [savedA, setSavedA]   = useState(false)
   const [errorP, setErrorP]   = useState('')
   const [errorN, setErrorN]   = useState('')
+  const [savingLang, setSavingLang] = useState(false)
+  const [savedLang, setSavedLang]   = useState(false)
+  const [selectedLanguage, setSelectedLanguage] = useState(perfil?.idioma || 'es')
 
   useEffect(() => {
     if (!perfil) return
     setPersonal({ nombre: perfil.nombre ?? '', apellido: perfil.apellido ?? '', telefono: perfil.telefono ?? '' })
+    setSelectedLanguage(perfil.idioma || 'es')
 
     supabase.from('clientes').select('*').eq('usuario_id', perfil.id).single()
       .then(({ data }) => {
@@ -142,13 +148,22 @@ export default function Perfil() {
     setTimeout(() => setSavedA(false), 3000)
   }
 
+  async function cambiarIdioma() {
+    setSavingLang(true); setSavedLang(false)
+    const success = await changeLanguage(selectedLanguage)
+    setSavingLang(false)
+    if (!success) return
+    setSavedLang(true)
+    setTimeout(() => setSavedLang(false), 3000)
+  }
+
   if (loading) return <div className="p-8 text-center text-gray-400 text-sm">Cargando…</div>
 
   return (
     <div className="p-8 max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Mi perfil</h1>
-        <p className="text-gray-500 text-sm">Datos personales y de tu negocio</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('perfil.title')}</h1>
+        <p className="text-gray-500 text-sm">{t('perfil.personal_info')}</p>
       </div>
 
       <div className="space-y-6">
@@ -228,6 +243,29 @@ export default function Perfil() {
             </div>
           </div>
           {errorN && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-3">{errorN}</p>}
+        </SectionCard>
+
+        {/* Idioma */}
+        <SectionCard
+          title={t('perfil.language')}
+          subtitle={t('perfil.language')}
+          onSave={cambiarIdioma}
+          saving={savingLang}
+          saved={savedLang}
+        >
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={lbl}>{t('perfil.language')}</label>
+              <select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className={inp}
+              >
+                <option value="es">{t('perfil.language_es')}</option>
+                <option value="en">{t('perfil.language_en')}</option>
+              </select>
+            </div>
+          </div>
         </SectionCard>
 
         {/* Alertas */}

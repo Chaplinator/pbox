@@ -26,7 +26,11 @@ const PanelOperativo = lazy(() => import('@/pages/operador/PanelOperativo'))
 const RecepcionInventario = lazy(() => import('@/pages/operador/RecepcionInventario'))
 const Usuarios = lazy(() => import('@/pages/operador/Usuarios'))
 const Reportes = lazy(() => import('@/pages/operador/Reportes'))
+
+// Admin pages - load on demand
 const SuperAdmin = lazy(() => import('@/pages/admin/SuperAdmin'))
+const AdminGM = lazy(() => import('@/pages/admin/AdminGM'))
+const AdminCuenta = lazy(() => import('@/pages/admin/AdminCuenta'))
 
 export default function App() {
   return (
@@ -54,7 +58,7 @@ export default function App() {
             </Route>
           </Route>
 
-          {/* Rutas protegidas — solo operador */}
+          {/* Rutas protegidas — solo operador/admin */}
           <Route element={<ProtectedRoute requiredRol="operador" />}>
             <Route element={<AppShell />}>
               <Route path="/operador" element={<Suspense fallback={<LoadingSpinner />}><PanelOperativo /></Suspense>} />
@@ -62,6 +66,25 @@ export default function App() {
               <Route path="/operador/reportes" element={<Suspense fallback={<LoadingSpinner />}><Reportes /></Suspense>} />
               <Route path="/operador/recepcion" element={<Suspense fallback={<LoadingSpinner />}><RecepcionInventario /></Suspense>} />
               <Route path="/admin" element={<Suspense fallback={<LoadingSpinner />}><SuperAdmin /></Suspense>} />
+            </Route>
+          </Route>
+
+          {/* Rutas protegidas — administrador_gm */}
+          <Route element={<ProtectedRoute requiredRol="administrador_gm" />}>
+            <Route element={<AppShell />}>
+              <Route path="/admin" element={<Suspense fallback={<LoadingSpinner />}><AdminGM /></Suspense>} />
+              <Route path="/admin/administrators" element={<Suspense fallback={<LoadingSpinner />}><AdminGM /></Suspense>} />
+              <Route path="/admin/m2" element={<Suspense fallback={<LoadingSpinner />}><AdminGM /></Suspense>} />
+              <Route path="/admin/settings" element={<Suspense fallback={<LoadingSpinner />}><AdminGM /></Suspense>} />
+            </Route>
+          </Route>
+
+          {/* Rutas protegidas — administrador_cuenta */}
+          <Route element={<ProtectedRoute requiredRol="administrador_cuenta" />}>
+            <Route element={<AppShell />}>
+              <Route path="/admin-cuenta/usuarios" element={<Suspense fallback={<LoadingSpinner />}><AdminCuenta /></Suspense>} />
+              <Route path="/admin-cuenta/operaciones" element={<Suspense fallback={<LoadingSpinner />}><AdminCuenta /></Suspense>} />
+              <Route path="/admin-cuenta/bodegas" element={<Suspense fallback={<LoadingSpinner />}><AdminCuenta /></Suspense>} />
             </Route>
           </Route>
 
