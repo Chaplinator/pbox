@@ -114,7 +114,7 @@ function NavCliente({ t }) {
 }
 
 export default function AppShell() {
-  const { perfil, signOut, bodegas } = useAuth()
+  const { perfil, signOut, bodegas, changeLanguage } = useAuth()
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
 
@@ -125,8 +125,9 @@ export default function AppShell() {
     navigate('/login')
   }
 
-  function handleLanguageChange(e) {
-    i18n.changeLanguage(e.target.value)
+  async function handleLanguageChange(e) {
+    const newLanguage = e.target.value
+    await changeLanguage(newLanguage)
   }
 
   return (
