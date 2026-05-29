@@ -34,16 +34,21 @@ export default function Usuarios() {
   const esMaster = yo?.rol === 'master'
 
   const cargar = useCallback(async () => {
-    if (!yo) return
     setLoading(true)
-    const { data } = await supabase
+    // RLS filtra automáticamente por bodega del usuario
+    const { data, error } = await supabase
       .from('usuarios')
       .select('id, nombre, apellido, email, rol, activo, bodega_id, created_at, clientes ( nombre_negocio )')
-      .eq('bodega_id', yo.bodega_id)
       .order('created_at', { ascending: false })
-    setUsuarios(data ?? [])
+
+    if (error) {
+      console.error('Error cargando usuarios:', error)
+      setUsuarios([])
+    } else {
+      setUsuarios(data ?? [])
+    }
     setLoading(false)
-  }, [yo])
+  }, [])
 
   useEffect(() => { cargar() }, [cargar])
 

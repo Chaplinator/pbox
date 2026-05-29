@@ -116,7 +116,13 @@ export default function Inventario() {
           )}
           <button
             onClick={() => setModalProducto({ open: true, producto: null })}
-            className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+            disabled={m2Uso && m2Uso.pct >= 100}
+            title={m2Uso && m2Uso.pct >= 100 ? 'No hay espacio. Necesitas expandir tu plan.' : ''}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              m2Uso && m2Uso.pct >= 100
+                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                : 'bg-brand-600 text-white hover:bg-brand-700'
+            }`}
           >
             + Agregar producto
           </button>
@@ -140,21 +146,29 @@ export default function Inventario() {
       {/* Barra de uso de m2 */}
       {m2Uso && (
         <div className={`mb-6 rounded-xl border px-5 py-4 ${
+          m2Uso.pct >= 100 ? 'bg-red-50 border-red-300' :
           m2Uso.pct >= 95 ? 'bg-red-50 border-red-200' :
           m2Uso.pct >= 80 ? 'bg-yellow-50 border-yellow-200' :
           'bg-white border-gray-200'
         }`}>
           <div className="flex items-center justify-between mb-2">
-            <span className={`text-sm font-medium ${m2Uso.pct >= 95 ? 'text-red-700' : m2Uso.pct >= 80 ? 'text-yellow-700' : 'text-gray-700'}`}>
+            <span className={`text-sm font-medium ${
+              m2Uso.pct >= 100 ? 'text-red-800' :
+              m2Uso.pct >= 95 ? 'text-red-700' :
+              m2Uso.pct >= 80 ? 'text-yellow-700' :
+              'text-gray-700'
+            }`}>
               Espacio en bodega
               {m2Uso.pct >= 80 && (
-                <span className="ml-2 text-xs font-semibold">
-                  {m2Uso.pct >= 95 ? '⚠️ Casi sin espacio' : '⚠️ Espacio limitado'}
+                <span className={`ml-2 text-xs font-semibold ${
+                  m2Uso.pct >= 100 ? 'text-red-700' : ''
+                }`}>
+                  {m2Uso.pct >= 100 ? '🚨 Sin espacio - Necesitas expandir tu plan' : m2Uso.pct >= 95 ? '⚠️ Casi sin espacio' : '⚠️ Espacio limitado'}
                 </span>
               )}
             </span>
             <span className="text-sm text-gray-500">
-              <span className="font-semibold text-gray-800">{m2Uso.usado.toFixed(1)} m²</span>
+              <span className={`font-semibold ${m2Uso.pct >= 100 ? 'text-red-700' : 'text-gray-800'}`}>{m2Uso.usado.toFixed(1)} m²</span>
               {' '}de{' '}
               <span className="font-semibold text-gray-800">{m2Uso.contratado} m²</span>
               <span className="ml-2 text-gray-400">({m2Uso.pct.toFixed(0)}%)</span>
