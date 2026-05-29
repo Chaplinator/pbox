@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/supabase/client'
 import { alertaM2 } from '@/utils/alertas'
+import { useModalState } from '@/hooks/useModalState'
 
 const ESTADO_STYLE = {
   pendiente: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pendiente' },
@@ -125,13 +126,12 @@ function ModalConfirmar({ ingreso, onClose, onConfirmado }) {
 
 function ModalEditar({ ingreso, onClose, onActualizado }) {
   const [notas, setNotas] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const { saving, setSaving, error, setError, reset } = useModalState()
 
   useEffect(() => {
     if (!ingreso) return
     setNotas(ingreso.notas ?? '')
-    setError('')
+    reset()
   }, [ingreso])
 
   async function actualizar() {
@@ -193,8 +193,7 @@ function ModalEditar({ ingreso, onClose, onActualizado }) {
 
 function ModalCancelar({ ingreso, onClose, onCancelado }) {
   const [explicacion, setExplicacion] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const { saving, setSaving, error, setError } = useModalState()
 
   async function cancelar() {
     if (!explicacion.trim()) {

@@ -13,7 +13,7 @@ const navCliente = [
 
 const navOperador = [
   { to: '/operador',            label: 'Panel Operativo' },
-  { to: '/operador/recepcion',  label: 'Recepción'       },
+  { to: '/operador/recepcion',  label: 'Recepción de ingresos' },
   { to: '/operador/reportes',   label: 'Reportes'        },
   { to: '/operador/usuarios',   label: 'Usuarios'        },
 ]
@@ -23,6 +23,7 @@ function NavSection({ items }) {
     <NavLink
       key={to}
       to={to}
+      end
       className={({ isActive }) =>
         `flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
           isActive

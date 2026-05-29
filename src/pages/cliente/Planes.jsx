@@ -139,6 +139,7 @@ export default function Planes() {
   const [modalPlan, setModalPlan] = useState(false)
   const [m2Nuevo, setM2Nuevo] = useState(null)
   const [savingM2, setSavingM2] = useState(false)
+  const [modoM2, setModoM2] = useState(null) // 'comprar' | 'vender' | null
 
   useEffect(() => {
     if (!perfil) return
@@ -241,39 +242,59 @@ export default function Planes() {
             </div>
 
             <div className="flex gap-3">
-              <button onClick={() => { setM2Nuevo(cliente.m2_contratados); }}
+              <button onClick={() => { setM2Nuevo(cliente.m2_contratados); setModoM2('comprar'); }}
                 className="flex-1 px-4 py-3 text-sm bg-emerald-200 text-emerald-800 rounded-lg hover:bg-emerald-300 transition-colors font-medium">
                 + Comprar m² (inmediato)
               </button>
-              <div className="flex-1 px-4 py-3 text-sm bg-gray-100 rounded-lg border border-gray-300 text-gray-600 font-medium">
-                <p className="text-xs text-gray-500">Devoluciones:</p>
-                <p className="text-sm">Contacta al admin</p>
-              </div>
+              <button onClick={() => { setM2Nuevo(cliente.m2_contratados); setModoM2('vender'); }}
+                disabled={cliente.m2_contratados <= M2_BASE[cliente.plan]}
+                className={`flex-1 px-4 py-3 text-sm rounded-lg font-medium transition-colors ${
+                  cliente.m2_contratados <= M2_BASE[cliente.plan]
+                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                    : 'bg-red-200 text-red-800 hover:bg-red-300'
+                }`}>
+                − Reducir m²
+              </button>
             </div>
           </>
         ) : (
           <>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 space-y-4">
+            <div className={`border rounded-lg p-5 space-y-4 ${
+              modoM2 === 'comprar'
+                ? 'bg-blue-50 border-blue-200'
+                : 'bg-orange-50 border-orange-200'
+            }`}>
               <div>
-                <p className="text-sm font-semibold text-gray-700 mb-3">¿Cuántos m² quieres comprar?</p>
-                <p className="text-xs text-gray-500 mb-2">Se aplica inmediatamente</p>
+                <p className="text-sm font-semibold text-gray-700 mb-3">
+                  {modoM2 === 'comprar' ? '¿Cuántos m² quieres comprar?' : '¿Cuántos m² quieres reducir?'}
+                </p>
+                <p className={`text-xs mb-2 ${modoM2 === 'comprar' ? 'text-emerald-700' : 'text-orange-700'}`}>
+                  {modoM2 === 'comprar'
+                    ? '✓ Se aplica inmediatamente'
+                    : '⏳ Se procesa en el próximo ciclo de facturación'}
+                </p>
                 <div className="flex gap-3 items-center">
                   <input
                     type="range"
-                    min={cliente.m2_contratados}
-                    max={cliente.m2_contratados + 100}
+                    min={modoM2 === 'comprar' ? cliente.m2_contratados : M2_BASE[cliente.plan]}
+                    max={modoM2 === 'comprar' ? cliente.m2_contratados + 100 : cliente.m2_contratados}
                     step="1"
                     value={m2Nuevo}
                     onChange={e => setM2Nuevo(Number(e.target.value))}
-                    className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                    className={`flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer ${
+                      modoM2 === 'comprar' ? 'accent-emerald-600' : 'accent-red-600'
+                    }`}
                   />
                   <div className="w-16">
                     <input
                       type="number"
-                      min={cliente.m2_contratados}
+                      min={modoM2 === 'comprar' ? cliente.m2_contratados : M2_BASE[cliente.plan]}
+                      max={modoM2 === 'comprar' ? cliente.m2_contratados + 100 : cliente.m2_contratados}
                       value={m2Nuevo}
-                      onChange={e => setM2Nuevo(Number(e.target.value))}
-                      className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      onChange={e => setM2Nuevo(Math.min(Math.max(Number(e.target.value), modoM2 === 'comprar' ? cliente.m2_contratados : M2_BASE[cliente.plan]), modoM2 === 'comprar' ? cliente.m2_contratados + 100 : cliente.m2_contratados))}
+                      className={`w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 ${
+                        modoM2 === 'comprar' ? 'focus:ring-emerald-600' : 'focus:ring-red-600'
+                      }`}
                     />
                   </div>
                   <span className="text-sm text-gray-600 whitespace-nowrap">m²</span>
@@ -285,27 +306,43 @@ export default function Planes() {
                   <span className="text-gray-600">Actual:</span>
                   <span className="font-semibold">{cliente.m2_contratados} m²</span>
                 </div>
-                <div className="flex justify-between text-sm text-emerald-700 font-semibold">
-                  <span>Compra:</span>
-                  <span>+{cambioM2} m² @ ${precioM2}/m²</span>
+                <div className={`flex justify-between text-sm font-semibold ${
+                  modoM2 === 'comprar' ? 'text-emerald-700' : 'text-red-700'
+                }`}>
+                  <span>{modoM2 === 'comprar' ? 'Compra:' : 'Reducción:'}</span>
+                  <span>{modoM2 === 'comprar' ? '+' : '−'}{Math.abs(cambioM2)} m² @ ${precioM2}/m²</span>
                 </div>
                 <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
-                  <span className="text-gray-900 font-semibold">Total a pagar:</span>
-                  <span className="text-lg font-bold text-emerald-600">${costoCambio}</span>
+                  <span className="text-gray-900 font-semibold">
+                    {modoM2 === 'comprar' ? 'Total a pagar:' : 'Se reducirá en próxima factura:'}
+                  </span>
+                  <span className={`text-lg font-bold ${
+                    modoM2 === 'comprar' ? 'text-emerald-600' : 'text-red-600'
+                  }`}>
+                    ${costoCambio}
+                  </span>
                 </div>
               </div>
 
               <div className="flex gap-2 pt-2">
                 <button
-                  onClick={() => setM2Nuevo(null)}
+                  onClick={() => { setM2Nuevo(null); setModoM2(null); }}
                   className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                   Cancelar
                 </button>
                 <button
                   onClick={guardarCambioM2}
                   disabled={savingM2 || m2Nuevo === cliente.m2_contratados}
-                  className="flex-1 px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium transition-colors disabled:opacity-50">
-                  {savingM2 ? 'Procesando…' : `Comprar $${costoCambio}`}
+                  className={`flex-1 px-4 py-2 text-sm text-white rounded-lg font-medium transition-colors disabled:opacity-50 ${
+                    modoM2 === 'comprar'
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}>
+                  {savingM2
+                    ? 'Procesando…'
+                    : modoM2 === 'comprar'
+                      ? `Comprar $${costoCambio}`
+                      : `Reducir m²`}
                 </button>
               </div>
             </div>

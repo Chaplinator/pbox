@@ -130,6 +130,7 @@ export default function Ingresos() {
   const [expandido, setExpandido]   = useState(null)
   const [modalOpen, setModalOpen]   = useState(false)
   const [tab, setTab]               = useState('ingresos')
+  const [deletingId, setDeletingId] = useState(null)
 
   useEffect(() => {
     if (!perfil) return
@@ -153,21 +154,20 @@ export default function Ingresos() {
     const { data: salidasData } = await supabase
       .from('movimientos_inventario')
       .select(`
-        id, tipo, cantidad, razon, created_at,
+        id, tipo, cantidad, referencia, created_at,
         producto_id, productos(nombre, sku),
-        usuario_id, usuarios(nombre, apellido, email)
+        operador_id, usuarios:operador_id(nombre, apellido, email)
       `)
-      .eq('cliente_id', clienteId)
       .eq('tipo', 'salida')
       .order('created_at', { ascending: false })
 
-    // Agrupar salidas por pedido/razon
+    // Agrupar salidas por referencia
     const salidasAgrupadas = {}
     for (const s of (salidasData ?? [])) {
-      const key = s.razon || s.id
+      const key = s.referencia || s.id
       if (!salidasAgrupadas[key]) {
         salidasAgrupadas[key] = {
-          razon: s.razon,
+          referencia: s.referencia,
           usuario: s.usuarios,
           created_at: s.created_at,
           items: [],
@@ -180,6 +180,20 @@ export default function Ingresos() {
   }, [clienteId])
 
   useEffect(() => { cargar() }, [cargar])
+
+  async function eliminarIngreso(ingresoId) {
+    if (!confirm('¿Estás seguro que quieres eliminar esta notificación de ingreso?')) return
+    setDeletingId(ingresoId)
+
+    const { error: e1 } = await supabase.from('items_ingreso').delete().eq('ingreso_id', ingresoId)
+    if (e1) { alert(e1.message); setDeletingId(null); return }
+
+    const { error: e2 } = await supabase.from('ingresos_inventario').delete().eq('id', ingresoId)
+    if (e2) { alert(e2.message); setDeletingId(null); return }
+
+    setDeletingId(null)
+    cargar()
+  }
 
   const ContenidoVacio = ({ texto }) => (
     <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
@@ -231,20 +245,32 @@ export default function Ingresos() {
               const open  = expandido === ing.id
               return (
                 <div key={ing.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                  <button
-                    onClick={() => setExpandido(open ? null : ing.id)}
-                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className="font-mono text-xs text-gray-400">{ing.numero}</span>
-                      <EstadoBadge estado={ing.estado} />
-                      <span className="text-sm text-gray-600">{ing.items_ingreso?.length} producto(s)</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-gray-400">{fecha}</span>
-                      <span className="text-gray-300">{open ? '▲' : '▼'}</span>
-                    </div>
-                  </button>
+                  <div className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors">
+                    <button
+                      onClick={() => setExpandido(open ? null : ing.id)}
+                      className="flex-1 flex items-center justify-between text-left"
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="font-mono text-xs text-gray-400">{ing.numero}</span>
+                        <EstadoBadge estado={ing.estado} />
+                        <span className="text-sm text-gray-600">{ing.items_ingreso?.length} producto(s)</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-400">{fecha}</span>
+                        <span className="text-gray-300">{open ? '▲' : '▼'}</span>
+                      </div>
+                    </button>
+                    {ing.estado === 'pendiente' && (
+                      <button
+                        onClick={() => eliminarIngreso(ing.id)}
+                        disabled={deletingId === ing.id}
+                        className="ml-3 px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                        title="Eliminar notificación"
+                      >
+                        ✕ Eliminar
+                      </button>
+                    )}
+                  </div>
                   {open && (
                     <div className="px-5 pb-4 border-t border-gray-100">
                       <table className="w-full text-sm mt-3">
@@ -303,7 +329,7 @@ export default function Ingresos() {
                     className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left"
                   >
                     <div className="flex items-center gap-4">
-                      <span className="font-mono text-xs text-gray-400">{salida.razon}</span>
+                      <span className="font-mono text-xs text-gray-400">{salida.referencia}</span>
                       <span className="text-sm text-gray-600">{salida.items.length} producto(s)</span>
                       <span className="text-xs text-gray-500">Por: {usuario}</span>
                     </div>

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { exportarUsuarios } from '@/utils/exportExcel'
+import { useModalState } from '@/hooks/useModalState'
 
 const ROL_STYLE = {
   master:   { bg: 'bg-brand-100', text: 'text-brand-800', label: 'Master'   },
@@ -38,7 +39,7 @@ export default function Usuarios() {
     // RLS filtra automáticamente por bodega del usuario
     const { data, error } = await supabase
       .from('usuarios')
-      .select('id, nombre, apellido, email, rol, activo, bodega_id, created_at, clientes ( nombre_negocio )')
+      .select('id, nombre, apellido, email, rol, activo, bodega_id, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -76,6 +77,19 @@ export default function Usuarios() {
     setSaving(usuario.id)
     await supabase.from('usuarios').update({ activo: !usuario.activo }).eq('id', usuario.id)
     setSaving(null)
+    cargar()
+  }
+
+  async function eliminarUsuario(usuario) {
+    if (!confirm(`¿Eliminar a ${usuario.nombre}? Esta acción no se puede deshacer.`)) return
+    setSaving(usuario.id)
+    const { error } = await supabase.from('usuarios').delete().eq('id', usuario.id)
+    setSaving(null)
+    if (error) {
+      console.error('Error eliminando usuario:', error.message, { usuario_id: usuario.id })
+      alert(error.message)
+      return
+    }
     cargar()
   }
 
@@ -203,6 +217,13 @@ export default function Usuarios() {
                               }`}
                             >
                               {u.activo ? 'Desactivar' : 'Activar'}
+                            </button>
+                            <button
+                              onClick={() => eliminarUsuario(u)}
+                              disabled={isSaving}
+                              className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                            >
+                              Eliminar
                             </button>
                           </>
                         )}
