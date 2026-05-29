@@ -17,6 +17,7 @@ import PanelOperativo from '@/pages/operador/PanelOperativo'
 import RecepcionInventario from '@/pages/operador/RecepcionInventario'
 import Canastas from '@/pages/cliente/Canastas'
 import SuperAdmin from '@/pages/admin/SuperAdmin'
+import Planes from '@/pages/cliente/Planes'
 import Usuarios from '@/pages/operador/Usuarios'
 import Reportes from '@/pages/operador/Reportes'
 
@@ -42,6 +43,7 @@ export default function App() {
               <Route path="/destinatarios" element={<Destinatarios />} />
               <Route path="/ingresos" element={<Ingresos />} />
               <Route path="/canastas" element={<Canastas />} />
+              <Route path="/planes" element={<Planes />} />
             </Route>
           </Route>
 

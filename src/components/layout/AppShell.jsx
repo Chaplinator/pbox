@@ -7,6 +7,7 @@ const navCliente = [
   { to: '/canastas',      label: 'Canastas'      },
   { to: '/ingresos',      label: 'Ingresos'      },
   { to: '/destinatarios', label: 'Destinatarios' },
+  { to: '/planes',        label: 'Mi Plan'       },
   { to: '/perfil',        label: 'Mi Perfil'     },
 ]
 
