@@ -50,6 +50,22 @@ export default function MasterGM() {
     setPromotingUser(null)
   }
 
+  async function demoteFromAdmin(userId) {
+    setPromotingUser(userId)
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ rol: 'cliente' })
+      .eq('id', userId)
+
+    if (!error) {
+      setSelectedUser(null)
+      await cargarDatos()
+    } else {
+      alert('Error al degradar usuario: ' + error.message)
+    }
+    setPromotingUser(null)
+  }
+
   if (perfil?.rol !== 'administrador_gm') {
     return (
       <div className="p-8 text-center">
@@ -181,8 +197,21 @@ export default function MasterGM() {
                       )}
 
                       {selectedUser.rol === 'administrador_cuenta' && (
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <p className="text-sm text-blue-900">✓ Este usuario ya es Admin</p>
+                        <div className="space-y-3">
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-900">✓ Este usuario es Admin</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (confirm('¿Estás seguro de que deseas quitar el acceso de Admin a este usuario?')) {
+                                demoteFromAdmin(selectedUser.id)
+                              }
+                            }}
+                            disabled={promotingUser === selectedUser.id}
+                            className="w-full px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {promotingUser === selectedUser.id ? 'Degradando...' : 'Quitar Admin'}
+                          </button>
                         </div>
                       )}
                     </div>
