@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate, Suspense } from 'react-router-dom'
-import { lazy } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
 import { AuthProvider } from '@/context/AuthContext'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
 import AppShell from '@/components/layout/AppShell'

@@ -14,15 +14,23 @@ export default defineConfig({
     // Code splitting configuration
     rollupOptions: {
       output: {
-        manualChunks: {
+        manualChunks: (id) => {
           // Split React and React-DOM into separate chunk
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router-dom')) {
+            return 'react-vendor'
+          }
           // Split Supabase into separate chunk
-          'supabase-vendor': ['@supabase/supabase-js'],
+          if (id.includes('node_modules/@supabase')) {
+            return 'supabase-vendor'
+          }
           // Split React Query into separate chunk
-          'query-vendor': ['@tanstack/react-query'],
+          if (id.includes('node_modules/@tanstack/react-query')) {
+            return 'query-vendor'
+          }
           // Split utilities
-          'utils': ['recharts', 'xlsx'],
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/xlsx')) {
+            return 'utils'
+          }
         },
       },
     },
