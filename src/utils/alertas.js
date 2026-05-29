@@ -1,10 +1,14 @@
 import { supabase } from '@/supabase/client'
+import { logWarning } from './errorLogger'
 
 async function invoke(body) {
   try {
     await supabase.functions.invoke('send-alert', { body })
-  } catch (_) {
-    // No critico — no interrumpe el flujo principal
+  } catch (error) {
+    logWarning('alertas:invoke', 'Error sending alert notification', {
+      type: body.type,
+      error: error.message,
+    })
   }
 }
 

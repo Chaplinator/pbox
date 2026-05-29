@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
 const navCliente = [
   { to: '/inventario',    label: 'Inventario'    },
@@ -104,7 +105,9 @@ export default function AppShell() {
 
       {/* Contenido principal */}
       <main className="flex-1 overflow-auto">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   )
