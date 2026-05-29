@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/supabase/client'
 import ModalGestionPedido from '@/components/operador/ModalGestionPedido'
 import { exportarPedidos } from '@/utils/exportExcel'
@@ -48,37 +49,52 @@ function KpiCard({ label, value, variant = 'default' }) {
 }
 
 export default function PanelOperativo() {
+  const { perfil } = useAuth()
   const [pedidos, setPedidos]   = useState([])
   const [loading, setLoading]   = useState(true)
   const [filtro, setFiltro]     = useState('activos')
   const [gestion, setGestion]   = useState(null)
 
   const cargar = useCallback(async () => {
+    if (!perfil) return
     setLoading(true)
-    const { data } = await supabase
+    const { data: pedidosRaw } = await supabase
       .from('pedidos')
       .select(`
-        id, numero_pedido, estado, created_at, updated_at, notas,
+        id, numero_pedido, estado, created_at, updated_at, notas, bodega_id,
         destinatario_nombre, destinatario_apellido, destinatario_cedula,
         destinatario_telefono, destinatario_telefono2, destinatario_email,
         direccion_entrega, numero_casa, referencias_entrega,
         ciudad_entrega, provincia_entrega,
         courrier, numero_guia, tracking_url, factura_url,
-        clientes ( nombre_negocio, usuarios ( nombre ) ),
+        cliente_id, clientes ( id, nombre_negocio, usuario_id ),
         items_pedido ( id, cantidad, productos ( sku, nombre ) )
       `)
       .order('created_at', { ascending: false })
 
-    const enriched = (data ?? []).map(p => ({
+    // Traer info del dueño de cada cliente
+    const clienteIds = [...new Set((pedidosRaw ?? []).map(p => p.cliente_id).filter(Boolean))]
+    const { data: usuarios } = await supabase
+      .from('usuarios')
+      .select('id, nombre, apellido, email')
+      .in('id', clienteIds.length ? clienteIds : [null])
+
+    const usuarioMap = Object.fromEntries((usuarios ?? []).map(u => [u.id, u]))
+
+    const enriched = (pedidosRaw ?? []).map(p => ({
       ...p,
-      cliente_nombre: p.clientes?.nombre_negocio ?? p.clientes?.usuarios?.nombre ?? '—',
+      cliente_nombre: p.clientes?.nombre_negocio ?? '—',
+      cliente_dueno: usuarioMap[p.clientes?.usuario_id]
+        ? `${usuarioMap[p.clientes.usuario_id].nombre} ${usuarioMap[p.clientes.usuario_id].apellido}`.trim()
+        : '—',
+      cliente_email: usuarioMap[p.clientes?.usuario_id]?.email ?? '—',
     }))
 
     setPedidos(enriched)
     setLoading(false)
-  }, [])
+  }, [perfil])
 
-  useEffect(() => { cargar() }, [cargar])
+  useEffect(() => { cargar() }, [cargar, perfil])
 
   function onActualizado() { setGestion(null); cargar() }
 
@@ -161,7 +177,7 @@ export default function PanelOperativo() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                {['N° Pedido', 'Cliente', 'Destinatario', 'Ciudad', 'Productos', 'Fecha', 'Estado', ''].map(h => (
+                {['N° Pedido', 'Cliente / Dueño', 'Email', 'Destinatario', 'Ciudad', 'Productos', 'Fecha', 'Estado', ''].map(h => (
                   <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-left">
                     {h}
                   </th>
@@ -181,7 +197,9 @@ export default function PanelOperativo() {
                     <td className="px-4 py-3 font-mono text-xs text-gray-500">{p.numero_pedido}</td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{p.cliente_nombre}</p>
+                      <p className="text-xs text-gray-500">{p.cliente_dueno}</p>
                     </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{p.cliente_email}</td>
                     <td className="px-4 py-3">
                       <p className="text-gray-700">{dest || '—'}</p>
                       {p.destinatario_telefono && (
