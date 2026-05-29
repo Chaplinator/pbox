@@ -27,7 +27,7 @@ export default function Login() {
     setLoading(false)
 
     if (error) {
-      setError(t('auth.invalid_credentials'))
+      setError(t('invalid_credentials', { ns: 'auth' }))
     } else {
       navigate('/dashboard')
     }
@@ -42,12 +42,12 @@ export default function Login() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">{t('auth.login_title')}</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">{t('login_title', { ns: 'auth' })}</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('auth.email')}
+                {t('email', { ns: 'auth' })}
               </label>
               <input
                 type="email"
@@ -62,7 +62,7 @@ export default function Login() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('auth.password')}
+                {t('password', { ns: 'auth' })}
               </label>
               <input
                 type="password"
@@ -84,14 +84,14 @@ export default function Login() {
               disabled={loading}
               className="w-full bg-brand-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors"
             >
-              {loading ? t('common.loading') : t('auth.login_button')}
+              {loading ? t('loading', { ns: 'common' }) : t('login_button', { ns: 'auth' })}
             </button>
           </form>
 
           <p className="mt-4 text-center text-sm text-gray-500">
-            {t('auth.no_account')}{' '}
+            {t('no_account', { ns: 'auth' })}{' '}
             <Link to="/registro" className="text-brand-600 hover:underline font-medium">
-              {t('auth.registro_button')}
+              {t('registro_button', { ns: 'auth' })}
             </Link>
           </p>
         </div>

@@ -26,13 +26,13 @@ function NavGM({ t }) {
   return (
     <>
       <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        {t('nav.administradores')}
+        {t('administradores', { ns: 'nav' })}
       </p>
       <NavSection items={[
-        { to: '/admin', label: t('admin.bodegas') },
-        { to: '/admin/administrators', label: t('admin.administrators') },
-        { to: '/admin/m2', label: t('admin.m2_management') },
-        { to: '/admin/settings', label: t('admin.system_settings') },
+        { to: '/admin', label: t('bodegas', { ns: 'admin' }) },
+        { to: '/admin/administrators', label: t('administrators', { ns: 'admin' }) },
+        { to: '/admin/m2', label: t('m2_management', { ns: 'admin' }) },
+        { to: '/admin/settings', label: t('system_settings', { ns: 'admin' }) },
       ]} />
     </>
   )
@@ -40,9 +40,9 @@ function NavGM({ t }) {
 
 function NavAdminCuenta({ t, bodegas }) {
   const navItems = [
-    { to: '/admin-cuenta/usuarios', label: t('nav.usuarios') },
+    { to: '/admin-cuenta/usuarios', label: t('usuarios', { ns: 'nav' }) },
     { to: '/admin-cuenta/operaciones', label: 'Operaciones' },
-    { to: '/admin-cuenta/bodegas', label: t('nav.bodegas') },
+    { to: '/admin-cuenta/bodegas', label: t('bodegas', { ns: 'nav' }) },
   ]
 
   return (
@@ -50,7 +50,7 @@ function NavAdminCuenta({ t, bodegas }) {
       {bodegas.length > 1 && (
         <>
           <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-            {t('nav.bodegas')}
+            {t('bodegas', { ns: 'nav' })}
           </p>
           <div className="px-3 mb-3">
             <select className="w-full px-2 py-1 text-sm border border-gray-300 rounded">
@@ -63,7 +63,7 @@ function NavAdminCuenta({ t, bodegas }) {
         </>
       )}
       <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        {t('admin.title')}
+        {t('title', { ns: 'admin' })}
       </p>
       <NavSection items={navItems} />
     </>
@@ -72,27 +72,27 @@ function NavAdminCuenta({ t, bodegas }) {
 
 function NavOperador({ t }) {
   const navItems = [
-    { to: '/operador', label: t('nav.operador') },
-    { to: '/operador/recepcion', label: t('nav.recepcion') },
-    { to: '/operador/usuarios', label: t('nav.usuarios') },
-    { to: '/operador/reportes', label: t('nav.reportes') },
+    { to: '/operador', label: t('operador', { ns: 'nav' }) },
+    { to: '/operador/recepcion', label: t('recepcion', { ns: 'nav' }) },
+    { to: '/operador/usuarios', label: t('usuarios', { ns: 'nav' }) },
+    { to: '/operador/reportes', label: t('reportes', { ns: 'nav' }) },
   ]
 
   return (
     <>
       <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        {t('nav.operador')}
+        {t('operador', { ns: 'nav' })}
       </p>
       <NavSection items={navItems} />
       <div className="my-3 border-t border-gray-100" />
       <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        {t('nav.dashboard')}
+        {t('dashboard', { ns: 'nav' })}
       </p>
       <NavSection items={[
-        { to: '/inventario', label: t('nav.inventario') },
-        { to: '/pedidos', label: t('nav.pedidos') },
-        { to: '/ingresos', label: t('nav.ingresos') },
-        { to: '/perfil', label: t('nav.perfil') },
+        { to: '/inventario', label: t('inventario', { ns: 'nav' }) },
+        { to: '/pedidos', label: t('pedidos', { ns: 'nav' }) },
+        { to: '/ingresos', label: t('ingresos', { ns: 'nav' }) },
+        { to: '/perfil', label: t('perfil', { ns: 'nav' }) },
       ]} />
     </>
   )
@@ -100,13 +100,13 @@ function NavOperador({ t }) {
 
 function NavCliente({ t }) {
   const navItems = [
-    { to: '/inventario', label: t('nav.inventario') },
-    { to: '/pedidos', label: t('nav.pedidos') },
-    { to: '/canastas', label: t('nav.canastas') },
-    { to: '/ingresos', label: t('nav.ingresos') },
-    { to: '/destinatarios', label: t('nav.destinatarios') },
-    { to: '/planes', label: t('nav.planes') },
-    { to: '/perfil', label: t('nav.perfil') },
+    { to: '/inventario', label: t('inventario', { ns: 'nav' }) },
+    { to: '/pedidos', label: t('pedidos', { ns: 'nav' }) },
+    { to: '/canastas', label: t('canastas', { ns: 'nav' }) },
+    { to: '/ingresos', label: t('ingresos', { ns: 'nav' }) },
+    { to: '/destinatarios', label: t('destinatarios', { ns: 'nav' }) },
+    { to: '/planes', label: t('planes', { ns: 'nav' }) },
+    { to: '/perfil', label: t('perfil', { ns: 'nav' }) },
   ]
 
   return <NavSection items={navItems} />
@@ -150,15 +150,15 @@ export default function AppShell() {
           {perfil && (
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">
-                {t('common.language')}
+                {t('language', { ns: 'common' })}
               </label>
               <select
                 value={i18n.language}
                 onChange={handleLanguageChange}
                 className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white"
               >
-                <option value="es">{t('perfil.language_es')}</option>
-                <option value="en">{t('perfil.language_en')}</option>
+                <option value="es">{t('language_es', { ns: 'perfil' })}</option>
+                <option value="en">{t('language_en', { ns: 'perfil' })}</option>
               </select>
             </div>
           )}
@@ -166,7 +166,7 @@ export default function AppShell() {
             onClick={handleSignOut}
             className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
           >
-            {t('common.logout')}
+            {t('logout', { ns: 'common' })}
           </button>
         </div>
       </aside>

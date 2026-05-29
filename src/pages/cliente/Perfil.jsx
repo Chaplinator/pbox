@@ -162,8 +162,8 @@ export default function Perfil() {
   return (
     <div className="p-8 max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">{t('perfil.title')}</h1>
-        <p className="text-gray-500 text-sm">{t('perfil.personal_info')}</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('title', { ns: 'perfil' })}</h1>
+        <p className="text-gray-500 text-sm">{t('personal_info', { ns: 'perfil' })}</p>
       </div>
 
       <div className="space-y-6">
@@ -247,22 +247,22 @@ export default function Perfil() {
 
         {/* Idioma */}
         <SectionCard
-          title={t('perfil.language')}
-          subtitle={t('perfil.language')}
+          title={t('language', { ns: 'perfil' })}
+          subtitle={t('language', { ns: 'perfil' })}
           onSave={cambiarIdioma}
           saving={savingLang}
           saved={savedLang}
         >
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={lbl}>{t('perfil.language')}</label>
+              <label className={lbl}>{t('language', { ns: 'perfil' })}</label>
               <select
                 value={selectedLanguage}
                 onChange={(e) => setSelectedLanguage(e.target.value)}
                 className={inp}
               >
-                <option value="es">{t('perfil.language_es')}</option>
-                <option value="en">{t('perfil.language_en')}</option>
+                <option value="es">{t('language_es', { ns: 'perfil' })}</option>
+                <option value="en">{t('language_en', { ns: 'perfil' })}</option>
               </select>
             </div>
           </div>

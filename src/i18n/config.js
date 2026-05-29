@@ -10,6 +10,7 @@ i18next
   .init({
     fallbackLng: 'es',
     defaultNS: 'common',
+    ns: ['common', 'auth', 'nav', 'inventory', 'orders', 'users', 'forms', 'errors', 'admin', 'perfil'],
     interpolation: {
       escapeValue: false,
     },
