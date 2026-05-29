@@ -34,14 +34,16 @@ export default function Usuarios() {
   const esMaster = yo?.rol === 'master'
 
   const cargar = useCallback(async () => {
+    if (!yo) return
     setLoading(true)
     const { data } = await supabase
       .from('usuarios')
-      .select('id, nombre, email, rol, activo, created_at, clientes ( nombre_negocio )')
+      .select('id, nombre, apellido, email, rol, activo, bodega_id, created_at, clientes ( nombre_negocio )')
+      .eq('bodega_id', yo.bodega_id)
       .order('created_at', { ascending: false })
     setUsuarios(data ?? [])
     setLoading(false)
-  }, [])
+  }, [yo])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -173,32 +175,33 @@ export default function Usuarios() {
                     <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fecha}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        {(esMaster || yo?.rol === 'operador') && !esYoMismo && (
-                          resetOk === u.id ? (
-                            <span className="text-xs text-green-600 font-medium">Correo enviado</span>
-                          ) : (
-                            <button
-                              onClick={() => resetPassword(u)}
-                              disabled={isSaving}
-                              className="text-xs text-brand-600 hover:underline disabled:opacity-50"
-                            >
-                              Resetear contraseña
-                            </button>
-                          )
-                        )}
                         {esMaster && !esYoMismo && (
-                          <button
-                            onClick={() => toggleActivo(u)}
-                            disabled={isSaving}
-                            className={`px-2 py-1 text-xs rounded-md transition-colors disabled:opacity-50 ${
-                              u.activo
-                                ? 'text-red-500 hover:bg-red-50'
-                                : 'text-green-600 hover:bg-green-50'
-                            }`}
-                          >
-                            {u.activo ? 'Desactivar' : 'Activar'}
-                          </button>
+                          <>
+                            {resetOk === u.id ? (
+                              <span className="text-xs text-green-600 font-medium">Correo enviado</span>
+                            ) : (
+                              <button
+                                onClick={() => resetPassword(u)}
+                                disabled={isSaving}
+                                className="text-xs text-brand-600 hover:underline disabled:opacity-50"
+                              >
+                                Resetear contraseña
+                              </button>
+                            )}
+                            <button
+                              onClick={() => toggleActivo(u)}
+                              disabled={isSaving}
+                              className={`px-2 py-1 text-xs rounded-md transition-colors disabled:opacity-50 ${
+                                u.activo
+                                  ? 'text-red-500 hover:bg-red-50'
+                                  : 'text-green-600 hover:bg-green-50'
+                              }`}
+                            >
+                              {u.activo ? 'Desactivar' : 'Activar'}
+                            </button>
+                          </>
                         )}
+                        {!esMaster && <span className="text-xs text-gray-400">—</span>}
                       </div>
                     </td>
                   </tr>
