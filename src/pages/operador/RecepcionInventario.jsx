@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/supabase/client'
 import { alertaM2 } from '@/utils/alertas'
 
@@ -49,7 +50,7 @@ function ModalConfirmar({ ingreso, onClose, onConfirmado }) {
 
   if (!ingreso) return null
 
-  const cliente = ingreso.clientes?.usuarios?.nombre ?? ingreso.clientes?.nombre_negocio ?? '—'
+  const cliente = '—'
   const fecha   = new Date(ingreso.created_at).toLocaleDateString('es-EC', { day:'2-digit', month:'short', year:'numeric' })
 
   return (
@@ -122,21 +123,159 @@ function ModalConfirmar({ ingreso, onClose, onConfirmado }) {
   )
 }
 
+function ModalEditar({ ingreso, onClose, onActualizado }) {
+  const [notas, setNotas] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!ingreso) return
+    setNotas(ingreso.notas ?? '')
+    setError('')
+  }, [ingreso])
+
+  async function actualizar() {
+    setSaving(true); setError('')
+    const { error: err } = await supabase
+      .from('ingresos_inventario')
+      .update({ notas })
+      .eq('id', ingreso.id)
+
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onActualizado()
+  }
+
+  if (!ingreso) return null
+
+  const fecha = new Date(ingreso.created_at).toLocaleDateString('es-EC', { day:'2-digit', month:'short', year:'numeric' })
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div>
+            <p className="text-xs text-gray-400">{fecha}</p>
+            <h2 className="font-semibold text-gray-900">Editar ingreso {ingreso.numero}</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Notas internas</label>
+            <textarea
+              value={notas}
+              onChange={e => setNotas(e.target.value)}
+              placeholder="Agregar notas sobre este ingreso..."
+              rows="4"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+
+          <div className="flex justify-end gap-2">
+            <button onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              Cancelar
+            </button>
+            <button onClick={actualizar} disabled={saving}
+              className="px-4 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors font-medium">
+              {saving ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ModalCancelar({ ingreso, onClose, onCancelado }) {
+  const [explicacion, setExplicacion] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function cancelar() {
+    if (!explicacion.trim()) {
+      setError('La explicación es requerida')
+      return
+    }
+    setSaving(true); setError('')
+    const { error: err } = await supabase
+      .from('ingresos_inventario')
+      .update({ estado: 'rechazado', explicacion_rechazo: explicacion })
+      .eq('id', ingreso.id)
+
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onCancelado()
+  }
+
+  if (!ingreso) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="font-semibold text-gray-900">Cancelar ingreso {ingreso.numero}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+            Se notificará al cliente con la explicación proporcionada.
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Explicación para el cliente</label>
+            <textarea
+              value={explicacion}
+              onChange={e => setExplicacion(e.target.value)}
+              placeholder="Explicar al cliente por qué se rechaza este ingreso..."
+              rows="4"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+
+          <div className="flex justify-end gap-2">
+            <button onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              No, mantener
+            </button>
+            <button onClick={cancelar} disabled={saving}
+              className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors font-medium">
+              {saving ? 'Cancelando…' : 'Cancelar ingreso'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function RecepcionInventario() {
+  const { perfil } = useAuth()
   const [ingresos, setIngresos]   = useState([])
   const [loading, setLoading]     = useState(true)
   const [filtro, setFiltro]       = useState('pendiente')
   const [modal, setModal]         = useState(null)
+  const [editando, setEditando]   = useState(null)
+  const [cancelando, setCancelando] = useState(null)
+  const [saving, setSaving]       = useState(null)
 
   const cargar = useCallback(async () => {
+    if (!perfil?.bodega_id) return
     setLoading(true)
     const q = supabase
       .from('ingresos_inventario')
       .select(`
         *,
-        clientes ( nombre_negocio, usuarios ( nombre ) ),
         items_ingreso ( producto_id, cantidad_enviada, cantidad_recibida, productos ( nombre, sku ) )
       `)
+      .eq('bodega_id', perfil.bodega_id)
       .order('created_at', { ascending: false })
 
     if (filtro !== 'todos') q.eq('estado', filtro)
@@ -144,9 +283,18 @@ export default function RecepcionInventario() {
     const { data } = await q
     setIngresos(data ?? [])
     setLoading(false)
-  }, [filtro])
+  }, [filtro, perfil?.bodega_id])
 
   useEffect(() => { cargar() }, [cargar])
+
+  async function eliminarIngreso(ingreso) {
+    if (!confirm(`¿Eliminar ingreso ${ingreso.numero}? Esta acción no se puede deshacer.`)) return
+    setSaving(ingreso.id)
+    const { error } = await supabase.from('ingresos_inventario').delete().eq('id', ingreso.id)
+    setSaving(null)
+    if (error) { alert(error.message); return }
+    cargar()
+  }
 
   const pendientesCount = ingresos.filter(i => i.estado === 'pendiente').length
 
@@ -154,7 +302,7 @@ export default function RecepcionInventario() {
     <div className="p-8">
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Recepción de inventario</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Recepción de ingresos</h1>
           <p className="text-gray-500 text-sm mt-0.5">Ingresos notificados por los clientes</p>
         </div>
         {pendientesCount > 0 && (
@@ -200,7 +348,7 @@ export default function RecepcionInventario() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {ingresos.map(ing => {
-                const cliente = ing.clientes?.nombre_negocio ?? ing.clientes?.usuarios?.nombre ?? '—'
+                const cliente = '—'
                 const fecha   = new Date(ing.created_at).toLocaleDateString('es-EC', { day:'2-digit', month:'short' })
                 const total   = ing.items_ingreso?.reduce((s, i) => s + i.cantidad_enviada, 0) ?? 0
                 return (
@@ -213,12 +361,32 @@ export default function RecepcionInventario() {
                     <td className="px-4 py-3 text-xs text-gray-400">{fecha}</td>
                     <td className="px-4 py-3"><EstadoBadge estado={ing.estado} /></td>
                     <td className="px-4 py-3 text-right">
-                      {ing.estado === 'pendiente' && (
-                        <button onClick={() => setModal(ing)}
-                          className="px-3 py-1 text-xs text-brand-600 hover:bg-brand-50 rounded-lg font-medium transition-colors">
-                          Confirmar recepción →
+                      <div className="flex items-center justify-end gap-2">
+                        {ing.estado === 'pendiente' && (
+                          <>
+                            <button onClick={() => setModal(ing)}
+                              disabled={saving === ing.id}
+                              className="px-2 py-1 text-xs text-brand-600 hover:bg-brand-50 rounded-lg font-medium transition-colors disabled:opacity-50">
+                              Confirmar →
+                            </button>
+                            <button onClick={() => setCancelando(ing)}
+                              disabled={saving === ing.id}
+                              className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
+                              Cancelar
+                            </button>
+                          </>
+                        )}
+                        <button onClick={() => setEditando(ing)}
+                          disabled={saving === ing.id}
+                          className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50">
+                          Editar
                         </button>
-                      )}
+                        <button onClick={() => eliminarIngreso(ing)}
+                          disabled={saving === ing.id}
+                          className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
+                          Eliminar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -232,6 +400,18 @@ export default function RecepcionInventario() {
         ingreso={modal}
         onClose={() => setModal(null)}
         onConfirmado={() => { setModal(null); cargar() }}
+      />
+
+      <ModalEditar
+        ingreso={editando}
+        onClose={() => setEditando(null)}
+        onActualizado={() => { setEditando(null); cargar() }}
+      />
+
+      <ModalCancelar
+        ingreso={cancelando}
+        onClose={() => setCancelando(null)}
+        onCancelado={() => { setCancelando(null); cargar() }}
       />
     </div>
   )
