@@ -46,192 +46,6 @@ const PLANES = {
   },
 }
 
-function ModalVenderM2({ open, onClose, clienteId, m2Actual, plan, onSaved }) {
-  const [cantidad, setCantidad] = useState(5)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  const m2Minimo = M2_BASE[plan] || 0
-  const m2Disponible = m2Actual - m2Minimo
-
-  const precioM2 = 2
-  const totalRecupero = cantidad * precioM2
-
-  async function guardar(e) {
-    e.preventDefault()
-    if (!cantidad || cantidad <= 0) { setError('Ingresa una cantidad válida.'); return }
-    if (cantidad > m2Disponible) {
-      setError(`Solo puedes devolver ${m2Disponible} m² (mínimo del plan: ${m2Minimo} m²).`);
-      return
-    }
-    setSaving(true); setError('')
-
-    const nuevoTotal = m2Actual - cantidad
-    const { error: err } = await supabase.from('clientes')
-      .update({ m2_contratados: nuevoTotal })
-      .eq('id', clienteId)
-
-    setSaving(false)
-    if (err) { setError(err.message); return }
-    onSaved()
-  }
-
-  if (!open) return null
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="font-semibold text-gray-900">Devolver m²</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
-        </div>
-        <form onSubmit={guardar} className="p-6 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              m² a devolver
-            </label>
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <input type="number" min="1" step="1" max={m2Disponible} value={cantidad}
-                  onChange={e => setCantidad(Math.min(Number(e.target.value), m2Disponible))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  placeholder="Cantidad" />
-              </div>
-              <span className="text-sm text-gray-500 pb-2">${precioM2}/m²</span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Disponibles para devolver: <strong>{m2Disponible} m²</strong> (mínimo del plan: {m2Minimo} m²)
-            </p>
-          </div>
-
-          <div className="bg-green-50 rounded-lg p-4 space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">m² actual:</span>
-              <span className="font-semibold text-gray-900">{m2Actual} m²</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Devolución:</span>
-              <span className="font-semibold text-gray-900">− {cantidad} m²</span>
-            </div>
-            <div className="border-t border-green-200 pt-2 flex items-center justify-between text-sm font-semibold">
-              <span className="text-gray-900">Total nuevo:</span>
-              <span className="text-brand-700">{m2Actual - cantidad} m²</span>
-            </div>
-            <div className="border-t border-green-200 pt-2 flex items-center justify-between">
-              <span className="text-gray-600 text-sm">Te reembolsamos:</span>
-              <span className="text-2xl font-bold text-green-600">${totalRecupero}</span>
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-500 bg-blue-50 px-3 py-2 rounded-lg">
-            💳 El reembolso se procesará según el método de pago registrado en tu cuenta.
-          </p>
-
-          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={saving || cantidad === 0}
-              className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
-              {saving ? 'Procesando…' : `Devolver por $${totalRecupero}`}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-function ModalComprarM2({ open, onClose, clienteId, m2Actual, onSaved }) {
-  const [cantidad, setCantidad] = useState(5)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  const precioM2 = 2 // Precio por m² adicional
-  const totalCosto = cantidad * precioM2
-
-  async function guardar(e) {
-    e.preventDefault()
-    if (!cantidad || cantidad <= 0) { setError('Ingresa una cantidad válida.'); return }
-    setSaving(true); setError('')
-
-    const nuevoTotal = m2Actual + cantidad
-    const { error: err } = await supabase.from('clientes')
-      .update({ m2_contratados: nuevoTotal })
-      .eq('id', clienteId)
-
-    setSaving(false)
-    if (err) { setError(err.message); return }
-    onSaved()
-  }
-
-  if (!open) return null
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="font-semibold text-gray-900">Comprar m² adicionales</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
-        </div>
-        <form onSubmit={guardar} className="p-6 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              m² adicionales a comprar
-            </label>
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <input type="number" min="1" step="1" value={cantidad}
-                  onChange={e => setCantidad(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  placeholder="Cantidad" />
-              </div>
-              <span className="text-sm text-gray-500 pb-2">${precioM2}/m²</span>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">m² actual:</span>
-              <span className="font-semibold text-gray-900">{m2Actual} m²</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Compra:</span>
-              <span className="font-semibold text-gray-900">+ {cantidad} m²</span>
-            </div>
-            <div className="border-t border-gray-200 pt-2 flex items-center justify-between text-sm font-semibold">
-              <span className="text-gray-900">Total nuevo:</span>
-              <span className="text-brand-700">{m2Actual + cantidad} m²</span>
-            </div>
-            <div className="border-t border-gray-200 pt-2 flex items-center justify-between">
-              <span className="text-gray-600 text-sm">Costo total:</span>
-              <span className="text-2xl font-bold text-gray-900">${totalCosto}</span>
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-500 bg-blue-50 px-3 py-2 rounded-lg">
-            💳 El pago se procesará según el método registrado en tu cuenta.
-          </p>
-
-          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={saving}
-              className="px-4 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors">
-              {saving ? 'Procesando…' : `Comprar por $${totalCosto}`}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
 function ModalCambiarPlan({ open, onClose, clienteId, planActual, onSaved }) {
   const [planSeleccionado, setPlanSeleccionado] = useState(planActual)
   const [saving, setSaving] = useState(false)
@@ -323,8 +137,11 @@ export default function Planes() {
   const [cliente, setCliente] = useState(null)
   const [loading, setLoading] = useState(true)
   const [modalPlan, setModalPlan] = useState(false)
-  const [modalM2, setModalM2] = useState(false)
-  const [modalVender, setModalVender] = useState(false)
+
+  // Estados para m² - comprar/vender
+  const [m2Nuevo, setM2Nuevo] = useState(null)
+  const [savingM2, setSavingM2] = useState(false)
+  const [modoM2, setModoM2] = useState(null) // 'comprar' | 'vender' | null
 
   useEffect(() => {
     if (!perfil) return
@@ -339,10 +156,32 @@ export default function Planes() {
     setLoading(false)
   }
 
+  async function guardarCambioM2() {
+    if (!m2Nuevo || m2Nuevo === cliente.m2_contratados) { setModoM2(null); return }
+
+    setSavingM2(true)
+    const { error } = await supabase.from('clientes')
+      .update({ m2_contratados: m2Nuevo })
+      .eq('id', cliente.id)
+
+    setSavingM2(false)
+    if (error) { alert(error.message); return }
+    setModoM2(null)
+    cargarCliente()
+  }
+
   if (loading) return <div className="p-8 text-center text-gray-400">Cargando…</div>
   if (!cliente) return <div className="p-8 text-center text-gray-400">No se encontró información.</div>
 
   const planActual = PLANES[cliente.plan]
+  const m2Minimo = M2_BASE[cliente.plan]
+  const m2Disponible = cliente.m2_contratados - m2Minimo
+  const precioM2 = 2
+
+  // Cálculos para mostrar
+  const m2Display = m2Nuevo !== null ? m2Nuevo : cliente.m2_contratados
+  const cambioM2 = m2Display - cliente.m2_contratados
+  const costoCambio = Math.abs(cambioM2) * precioM2
 
   return (
     <div className="p-8">
@@ -365,7 +204,7 @@ export default function Planes() {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-4">
           {Object.entries(planActual.limites).map(([key, val]) => (
             <div key={key} className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">{key.replace('_', ' ')}</p>
@@ -375,38 +214,166 @@ export default function Planes() {
         </div>
       </div>
 
-      {/* Espacio de almacenamiento */}
+      {/* Espacio de almacenamiento con sliders */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Espacio de almacenamiento</p>
-            <h3 className="text-2xl font-bold text-gray-900 mt-1">{cliente.m2_contratados} m²</h3>
-            <p className="text-gray-500 text-sm mt-1">Espacio disponible para tu inventario</p>
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Espacio de almacenamiento</p>
+          <div className="flex items-baseline gap-2 mt-2">
+            <h3 className="text-3xl font-bold text-gray-900">{m2Display} m²</h3>
+            {m2Nuevo !== null && (
+              <span className={`text-sm font-semibold ${cambioM2 > 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                {cambioM2 > 0 ? '+' : ''}{cambioM2} m²
+              </span>
+            )}
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => setModalVender(true)}
-              className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
-              Devolver m²
-            </button>
-            <button onClick={() => setModalM2(true)}
-              className="px-4 py-2 text-sm bg-brand-100 text-brand-700 rounded-lg hover:bg-brand-200 transition-colors font-medium">
-              Comprar m²
-            </button>
-          </div>
+          <p className="text-gray-500 text-sm mt-1">Espacio disponible para tu inventario</p>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">m² contratados:</span>
-            <span className="font-semibold text-gray-900">{cliente.m2_contratados} m²</span>
-          </div>
-          <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600">
-            💡 Cada m² adicional cuesta <strong>$2/mes</strong>. Puedes comprar en incrementos de 1 m².
-          </div>
-        </div>
+        {modoM2 === null ? (
+          <>
+            {/* Estado actual sin editar */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm text-gray-600">m² contratados</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{cliente.m2_contratados} m²</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">Mínimo del plan</p>
+                  <p className="text-2xl font-bold text-blue-600 mt-1">{m2Minimo} m²</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de comprar/vender */}
+            <div className="flex gap-3">
+              <button onClick={() => { setModoM2('comprar'); setM2Nuevo(cliente.m2_contratados); }}
+                className="flex-1 px-4 py-3 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium">
+                + Comprar m²
+              </button>
+              <button onClick={() => { setModoM2('vender'); setM2Nuevo(cliente.m2_contratados); }}
+                disabled={m2Disponible <= 0}
+                className="flex-1 px-4 py-3 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                − Devolver m²
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Slider mode */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 space-y-4">
+              {modoM2 === 'comprar' ? (
+                <>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-3">¿Cuántos m² quieres comprar?</p>
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="range"
+                        min={cliente.m2_contratados}
+                        max={cliente.m2_contratados + 100}
+                        step="1"
+                        value={m2Nuevo}
+                        onChange={e => setM2Nuevo(Number(e.target.value))}
+                        className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-green-600"
+                      />
+                      <div className="w-16">
+                        <input
+                          type="number"
+                          min={cliente.m2_contratados}
+                          value={m2Nuevo}
+                          onChange={e => setM2Nuevo(Number(e.target.value))}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                      </div>
+                      <span className="text-sm text-gray-600 whitespace-nowrap">m²</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Actual:</span>
+                      <span className="font-semibold">{cliente.m2_contratados} m²</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-green-700 font-semibold">
+                      <span>Compra:</span>
+                      <span>+{cambioM2} m² @ ${precioM2}/m²</span>
+                    </div>
+                    <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
+                      <span className="text-gray-900 font-semibold">Total:</span>
+                      <span className="text-lg font-bold text-green-600">${costoCambio}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-3">¿Cuántos m² quieres devolver?</p>
+                    <p className="text-xs text-gray-500 mb-2">Disponibles: {m2Disponible} m² (mínimo: {m2Minimo} m²)</p>
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="range"
+                        min={m2Minimo}
+                        max={cliente.m2_contratados}
+                        step="1"
+                        value={m2Nuevo}
+                        onChange={e => setM2Nuevo(Number(e.target.value))}
+                        className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-orange-600"
+                      />
+                      <div className="w-16">
+                        <input
+                          type="number"
+                          min={m2Minimo}
+                          max={cliente.m2_contratados}
+                          value={m2Nuevo}
+                          onChange={e => setM2Nuevo(Math.min(Math.max(Number(e.target.value), m2Minimo), cliente.m2_contratados))}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+                      <span className="text-sm text-gray-600 whitespace-nowrap">m²</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Actual:</span>
+                      <span className="font-semibold">{cliente.m2_contratados} m²</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-orange-700 font-semibold">
+                      <span>Devolución:</span>
+                      <span>−{Math.abs(cambioM2)} m² @ ${precioM2}/m²</span>
+                    </div>
+                    <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
+                      <span className="text-gray-900 font-semibold">Te reembolsamos:</span>
+                      <span className="text-lg font-bold text-orange-600">${costoCambio}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Botones de acción */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setModoM2(null)}
+                  className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                  Cancelar
+                </button>
+                <button
+                  onClick={guardarCambioM2}
+                  disabled={savingM2 || m2Nuevo === cliente.m2_contratados}
+                  className={`flex-1 px-4 py-2 text-sm text-white rounded-lg font-medium transition-colors disabled:opacity-50 ${
+                    modoM2 === 'comprar'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-orange-600 hover:bg-orange-700'
+                  }`}>
+                  {savingM2 ? 'Procesando…' : modoM2 === 'comprar' ? `Comprar $${costoCambio}` : `Devolver $${costoCambio}`}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Otros planes disponibles */}
+      {/* Otros planes */}
       <div className="mt-12">
         <h3 className="text-lg font-semibold text-gray-900 mb-6">Otros planes disponibles</h3>
         <div className="grid grid-cols-3 gap-6">
@@ -454,23 +421,6 @@ export default function Planes() {
         clienteId={cliente.id}
         planActual={cliente.plan}
         onSaved={() => { setModalPlan(false); cargarCliente() }}
-      />
-
-      <ModalComprarM2
-        open={modalM2}
-        onClose={() => setModalM2(false)}
-        clienteId={cliente.id}
-        m2Actual={cliente.m2_contratados}
-        onSaved={() => { setModalM2(false); cargarCliente() }}
-      />
-
-      <ModalVenderM2
-        open={modalVender}
-        onClose={() => setModalVender(false)}
-        clienteId={cliente.id}
-        m2Actual={cliente.m2_contratados}
-        plan={cliente.plan}
-        onSaved={() => { setModalVender(false); cargarCliente() }}
       />
     </div>
   )
