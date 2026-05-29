@@ -127,7 +127,11 @@ export default function AppShell() {
 
   async function handleLanguageChange(e) {
     const newLanguage = e.target.value
-    await changeLanguage(newLanguage)
+    if (newLanguage === i18n.language) return
+    const success = await changeLanguage(newLanguage)
+    if (success) {
+      i18n.changeLanguage(newLanguage)
+    }
   }
 
   return (

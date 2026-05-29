@@ -6,21 +6,48 @@ export default function MasterGM() {
   const { perfil } = useAuth()
   const [activeTab, setActiveTab] = useState('usuarios')
   const [admins, setAdmins] = useState([])
+  const [allUsers, setAllUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [promotingUser, setPromotingUser] = useState(null)
 
   useEffect(() => {
-    cargarAdmins()
+    cargarDatos()
   }, [])
 
-  async function cargarAdmins() {
+  async function cargarDatos() {
     setLoading(true)
-    const { data } = await supabase
+    // Cargar admins
+    const { data: adminsData } = await supabase
       .from('usuarios')
       .select('id, nombre, apellido, email, rol, created_at, activo')
       .eq('rol', 'administrador_cuenta')
       .order('created_at', { ascending: false })
-    setAdmins(data || [])
+    setAdmins(adminsData || [])
+
+    // Cargar todos los usuarios
+    const { data: allUsersData } = await supabase
+      .from('usuarios')
+      .select('id, nombre, apellido, email, rol, created_at, activo')
+      .order('created_at', { ascending: false })
+    setAllUsers(allUsersData || [])
     setLoading(false)
+  }
+
+  async function promoteToAdmin(userId) {
+    setPromotingUser(userId)
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ rol: 'administrador_cuenta' })
+      .eq('id', userId)
+
+    if (!error) {
+      setSelectedUser(null)
+      await cargarDatos()
+    } else {
+      alert('Error al promocionar usuario: ' + error.message)
+    }
+    setPromotingUser(null)
   }
 
   if (perfil?.rol !== 'administrador_gm') {
@@ -79,46 +106,92 @@ export default function MasterGM() {
             <h2 className="text-xl font-bold mb-4">Usuarios & Módulos</h2>
             {loading ? (
               <p className="text-gray-600">Cargando...</p>
-            ) : admins.length === 0 ? (
-              <p className="text-gray-600">No hay administradores creados</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Nombre</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Email</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Estado</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Creado</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Módulos</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {admins.map(admin => (
-                      <tr key={admin.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2">{admin.nombre} {admin.apellido || ''}</td>
-                        <td className="px-4 py-2 text-gray-600">{admin.email}</td>
-                        <td className="px-4 py-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            admin.activo
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Lista de usuarios */}
+                <div className="lg:col-span-2">
+                  <h3 className="font-semibold text-gray-900 mb-3">Todos los Usuarios</h3>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {allUsers.map(user => (
+                      <div
+                        key={user.id}
+                        onClick={() => setSelectedUser(user)}
+                        className={`p-3 border rounded-lg cursor-pointer transition ${
+                          selectedUser?.id === user.id
+                            ? 'border-brand-500 bg-brand-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-gray-900">{user.nombre} {user.apellido || ''}</p>
+                            <p className="text-sm text-gray-600">{user.email}</p>
+                          </div>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            user.rol === 'administrador_cuenta'
+                              ? 'bg-blue-100 text-blue-700'
+                              : user.rol === 'administrador_gm'
+                              ? 'bg-purple-100 text-purple-700'
+                              : user.rol === 'operador'
+                              ? 'bg-orange-100 text-orange-700'
+                              : 'bg-gray-100 text-gray-700'
                           }`}>
-                            {admin.activo ? 'Activo' : 'Inactivo'}
+                            {user.rol === 'administrador_cuenta' ? 'Admin' : user.rol}
                           </span>
-                        </td>
-                        <td className="px-4 py-2 text-gray-600 text-xs">
-                          {new Date(admin.created_at).toLocaleDateString('es-ES')}
-                        </td>
-                        <td className="px-4 py-2">
-                          <button className="text-brand-600 hover:text-brand-700 font-medium">
-                            Configurar
-                          </button>
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
+
+                {/* Panel de detalles */}
+                <div className="lg:col-span-1">
+                  {selectedUser ? (
+                    <div className="border border-gray-200 rounded-lg p-4 sticky top-0">
+                      <h3 className="font-semibold text-gray-900 mb-4">Detalles</h3>
+                      <div className="space-y-3 mb-4">
+                        <div>
+                          <p className="text-xs text-gray-600">Nombre</p>
+                          <p className="font-medium text-gray-900">{selectedUser.nombre} {selectedUser.apellido || ''}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600">Email</p>
+                          <p className="font-medium text-gray-900">{selectedUser.email}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600">Rol Actual</p>
+                          <p className="font-medium text-gray-900">{selectedUser.rol}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600">Estado</p>
+                          <p className={selectedUser.activo ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                            {selectedUser.activo ? 'Activo' : 'Inactivo'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {selectedUser.rol !== 'administrador_cuenta' && (
+                        <button
+                          onClick={() => promoteToAdmin(selectedUser.id)}
+                          disabled={promotingUser === selectedUser.id}
+                          className="w-full px-4 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 disabled:opacity-50"
+                        >
+                          {promotingUser === selectedUser.id ? 'Promoviendo...' : 'Promocionar a Admin'}
+                        </button>
+                      )}
+
+                      {selectedUser.rol === 'administrador_cuenta' && (
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-sm text-blue-900">✓ Este usuario ya es Admin</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="border border-gray-200 rounded-lg p-4 text-center">
+                      <p className="text-gray-600">Selecciona un usuario para ver detalles</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
