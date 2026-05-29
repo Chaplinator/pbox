@@ -137,11 +137,8 @@ export default function Planes() {
   const [cliente, setCliente] = useState(null)
   const [loading, setLoading] = useState(true)
   const [modalPlan, setModalPlan] = useState(false)
-
-  // Estados para m² - comprar/vender
   const [m2Nuevo, setM2Nuevo] = useState(null)
   const [savingM2, setSavingM2] = useState(false)
-  const [modoM2, setModoM2] = useState(null) // 'comprar' | 'vender' | null
 
   useEffect(() => {
     if (!perfil) return
@@ -157,7 +154,7 @@ export default function Planes() {
   }
 
   async function guardarCambioM2() {
-    if (!m2Nuevo || m2Nuevo === cliente.m2_contratados) { setModoM2(null); return }
+    if (!m2Nuevo || m2Nuevo === cliente.m2_contratados) { setM2Nuevo(null); return }
 
     setSavingM2(true)
     const { error } = await supabase.from('clientes')
@@ -166,7 +163,7 @@ export default function Planes() {
 
     setSavingM2(false)
     if (error) { alert(error.message); return }
-    setModoM2(null)
+    setM2Nuevo(null)
     cargarCliente()
   }
 
@@ -174,13 +171,8 @@ export default function Planes() {
   if (!cliente) return <div className="p-8 text-center text-gray-400">No se encontró información.</div>
 
   const planActual = PLANES[cliente.plan]
-  const m2Minimo = M2_BASE[cliente.plan]
-  const m2Disponible = cliente.m2_contratados - m2Minimo
   const precioM2 = 2
-
-  // Cálculos para mostrar
-  const m2Display = m2Nuevo !== null ? m2Nuevo : cliente.m2_contratados
-  const cambioM2 = m2Display - cliente.m2_contratados
+  const cambioM2 = m2Nuevo !== null ? m2Nuevo - cliente.m2_contratados : 0
   const costoCambio = Math.abs(cambioM2) * precioM2
 
   return (
@@ -214,158 +206,106 @@ export default function Planes() {
         </div>
       </div>
 
-      {/* Espacio de almacenamiento con sliders */}
+      {/* Espacio con slider solo para comprar */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="mb-6">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Espacio de almacenamiento</p>
           <div className="flex items-baseline gap-2 mt-2">
-            <h3 className="text-3xl font-bold text-gray-900">{m2Display} m²</h3>
+            <h3 className="text-3xl font-bold text-gray-900">{m2Nuevo !== null ? m2Nuevo : cliente.m2_contratados} m²</h3>
             {m2Nuevo !== null && (
-              <span className={`text-sm font-semibold ${cambioM2 > 0 ? 'text-green-600' : 'text-orange-600'}`}>
-                {cambioM2 > 0 ? '+' : ''}{cambioM2} m²
+              <span className={`text-sm font-semibold text-emerald-600`}>
+                +{cambioM2} m²
               </span>
             )}
           </div>
           <p className="text-gray-500 text-sm mt-1">Espacio disponible para tu inventario</p>
         </div>
 
-        {modoM2 === null ? (
+        {m2Nuevo === null ? (
           <>
-            {/* Estado actual sin editar */}
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">m² contratados</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{cliente.m2_contratados} m²</p>
                 </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Compras:</p>
+                  <p className="text-lg font-bold text-emerald-700 mt-1">Inmediatas</p>
+                </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-600">Mínimo del plan</p>
-                  <p className="text-2xl font-bold text-blue-600 mt-1">{m2Minimo} m²</p>
+                  <p className="text-sm text-gray-600">Devoluciones:</p>
+                  <p className="text-lg font-bold text-gray-500 mt-1">Próx. factura</p>
                 </div>
               </div>
             </div>
 
-            {/* Botones de comprar/vender */}
             <div className="flex gap-3">
-              <button onClick={() => { setModoM2('comprar'); setM2Nuevo(cliente.m2_contratados); }}
+              <button onClick={() => { setM2Nuevo(cliente.m2_contratados); }}
                 className="flex-1 px-4 py-3 text-sm bg-emerald-200 text-emerald-800 rounded-lg hover:bg-emerald-300 transition-colors font-medium">
-                + Comprar m²
+                + Comprar m² (inmediato)
               </button>
-              <button onClick={() => { setModoM2('vender'); setM2Nuevo(cliente.m2_contratados); }}
-                disabled={m2Disponible <= 0}
-                className="flex-1 px-4 py-3 text-sm bg-red-200 text-red-800 rounded-lg hover:bg-red-300 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-                − Devolver m²
-              </button>
+              <div className="flex-1 px-4 py-3 text-sm bg-gray-100 rounded-lg border border-gray-300 text-gray-600 font-medium">
+                <p className="text-xs text-gray-500">Devoluciones:</p>
+                <p className="text-sm">Contacta al admin</p>
+              </div>
             </div>
           </>
         ) : (
           <>
-            {/* Slider mode */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 space-y-4">
-              {modoM2 === 'comprar' ? (
-                <>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-3">¿Cuántos m² quieres comprar?</p>
-                    <div className="flex gap-3 items-center">
-                      <input
-                        type="range"
-                        min={cliente.m2_contratados}
-                        max={cliente.m2_contratados + 100}
-                        step="1"
-                        value={m2Nuevo}
-                        onChange={e => setM2Nuevo(Number(e.target.value))}
-                        className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-emerald-600"
-                      />
-                      <div className="w-16">
-                        <input
-                          type="number"
-                          min={cliente.m2_contratados}
-                          value={m2Nuevo}
-                          onChange={e => setM2Nuevo(Number(e.target.value))}
-                          className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                        />
-                      </div>
-                      <span className="text-sm text-gray-600 whitespace-nowrap">m²</span>
-                    </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-3">¿Cuántos m² quieres comprar?</p>
+                <p className="text-xs text-gray-500 mb-2">Se aplica inmediatamente</p>
+                <div className="flex gap-3 items-center">
+                  <input
+                    type="range"
+                    min={cliente.m2_contratados}
+                    max={cliente.m2_contratados + 100}
+                    step="1"
+                    value={m2Nuevo}
+                    onChange={e => setM2Nuevo(Number(e.target.value))}
+                    className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                  />
+                  <div className="w-16">
+                    <input
+                      type="number"
+                      min={cliente.m2_contratados}
+                      value={m2Nuevo}
+                      onChange={e => setM2Nuevo(Number(e.target.value))}
+                      className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
                   </div>
+                  <span className="text-sm text-gray-600 whitespace-nowrap">m²</span>
+                </div>
+              </div>
 
-                  <div className="bg-white rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Actual:</span>
-                      <span className="font-semibold">{cliente.m2_contratados} m²</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-green-700 font-semibold">
-                      <span>Compra:</span>
-                      <span>+{cambioM2} m² @ ${precioM2}/m²</span>
-                    </div>
-                    <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
-                      <span className="text-gray-900 font-semibold">Total:</span>
-                      <span className="text-lg font-bold text-green-600">${costoCambio}</span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-3">¿Cuántos m² quieres devolver?</p>
-                    <p className="text-xs text-gray-500 mb-2">Disponibles: {m2Disponible} m² (mínimo: {m2Minimo} m²)</p>
-                    <div className="flex gap-3 items-center">
-                      <input
-                        type="range"
-                        min={m2Minimo}
-                        max={cliente.m2_contratados}
-                        step="1"
-                        value={m2Nuevo}
-                        onChange={e => setM2Nuevo(Number(e.target.value))}
-                        className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-red-600"
-                      />
-                      <div className="w-16">
-                        <input
-                          type="number"
-                          min={m2Minimo}
-                          max={cliente.m2_contratados}
-                          value={m2Nuevo}
-                          onChange={e => setM2Nuevo(Math.min(Math.max(Number(e.target.value), m2Minimo), cliente.m2_contratados))}
-                          className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-red-600"
-                        />
-                      </div>
-                      <span className="text-sm text-gray-600 whitespace-nowrap">m²</span>
-                    </div>
-                  </div>
+              <div className="bg-white rounded-lg p-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Actual:</span>
+                  <span className="font-semibold">{cliente.m2_contratados} m²</span>
+                </div>
+                <div className="flex justify-between text-sm text-emerald-700 font-semibold">
+                  <span>Compra:</span>
+                  <span>+{cambioM2} m² @ ${precioM2}/m²</span>
+                </div>
+                <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
+                  <span className="text-gray-900 font-semibold">Total a pagar:</span>
+                  <span className="text-lg font-bold text-emerald-600">${costoCambio}</span>
+                </div>
+              </div>
 
-                  <div className="bg-white rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Actual:</span>
-                      <span className="font-semibold">{cliente.m2_contratados} m²</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-orange-700 font-semibold">
-                      <span>Devolución:</span>
-                      <span>−{Math.abs(cambioM2)} m² @ ${precioM2}/m²</span>
-                    </div>
-                    <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
-                      <span className="text-gray-900 font-semibold">Te reembolsamos:</span>
-                      <span className="text-lg font-bold text-orange-600">${costoCambio}</span>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Botones de acción */}
               <div className="flex gap-2 pt-2">
                 <button
-                  onClick={() => setModoM2(null)}
+                  onClick={() => setM2Nuevo(null)}
                   className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                   Cancelar
                 </button>
                 <button
                   onClick={guardarCambioM2}
                   disabled={savingM2 || m2Nuevo === cliente.m2_contratados}
-                  className={`flex-1 px-4 py-2 text-sm text-white rounded-lg font-medium transition-colors disabled:opacity-50 ${
-                    modoM2 === 'comprar'
-                      ? 'bg-emerald-600 hover:bg-emerald-700'
-                      : 'bg-red-600 hover:bg-red-700'
-                  }`}>
-                  {savingM2 ? 'Procesando…' : modoM2 === 'comprar' ? `Comprar $${costoCambio}` : `Devolver $${costoCambio}`}
+                  className="flex-1 px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  {savingM2 ? 'Procesando…' : `Comprar $${costoCambio}`}
                 </button>
               </div>
             </div>
