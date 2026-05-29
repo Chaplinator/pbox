@@ -248,12 +248,12 @@ export default function Planes() {
             {/* Botones de comprar/vender */}
             <div className="flex gap-3">
               <button onClick={() => { setModoM2('comprar'); setM2Nuevo(cliente.m2_contratados); }}
-                className="flex-1 px-4 py-3 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium">
+                className="flex-1 px-4 py-3 text-sm bg-emerald-200 text-emerald-800 rounded-lg hover:bg-emerald-300 transition-colors font-medium">
                 + Comprar m²
               </button>
               <button onClick={() => { setModoM2('vender'); setM2Nuevo(cliente.m2_contratados); }}
                 disabled={m2Disponible <= 0}
-                className="flex-1 px-4 py-3 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                className="flex-1 px-4 py-3 text-sm bg-red-200 text-red-800 rounded-lg hover:bg-red-300 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                 − Devolver m²
               </button>
             </div>
@@ -274,7 +274,7 @@ export default function Planes() {
                         step="1"
                         value={m2Nuevo}
                         onChange={e => setM2Nuevo(Number(e.target.value))}
-                        className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-green-600"
+                        className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                       />
                       <div className="w-16">
                         <input
@@ -282,7 +282,7 @@ export default function Planes() {
                           min={cliente.m2_contratados}
                           value={m2Nuevo}
                           onChange={e => setM2Nuevo(Number(e.target.value))}
-                          className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-600"
                         />
                       </div>
                       <span className="text-sm text-gray-600 whitespace-nowrap">m²</span>
@@ -317,7 +317,7 @@ export default function Planes() {
                         step="1"
                         value={m2Nuevo}
                         onChange={e => setM2Nuevo(Number(e.target.value))}
-                        className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-orange-600"
+                        className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-red-600"
                       />
                       <div className="w-16">
                         <input
@@ -326,7 +326,7 @@ export default function Planes() {
                           max={cliente.m2_contratados}
                           value={m2Nuevo}
                           onChange={e => setM2Nuevo(Math.min(Math.max(Number(e.target.value), m2Minimo), cliente.m2_contratados))}
-                          className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-red-600"
                         />
                       </div>
                       <span className="text-sm text-gray-600 whitespace-nowrap">m²</span>
@@ -362,8 +362,8 @@ export default function Planes() {
                   disabled={savingM2 || m2Nuevo === cliente.m2_contratados}
                   className={`flex-1 px-4 py-2 text-sm text-white rounded-lg font-medium transition-colors disabled:opacity-50 ${
                     modoM2 === 'comprar'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-orange-600 hover:bg-orange-700'
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-red-600 hover:bg-red-700'
                   }`}>
                   {savingM2 ? 'Procesando…' : modoM2 === 'comprar' ? `Comprar $${costoCambio}` : `Devolver $${costoCambio}`}
                 </button>
