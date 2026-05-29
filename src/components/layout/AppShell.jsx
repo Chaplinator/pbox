@@ -22,27 +22,29 @@ function NavSection({ items }) {
   ))
 }
 
-function NavGM({ t }) {
+function NavMasterGM({ t }) {
   return (
     <>
       <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        {t('administradores', { ns: 'nav' })}
+        Gestión de Permisos
       </p>
       <NavSection items={[
-        { to: '/admin', label: t('bodegas', { ns: 'admin' }) },
-        { to: '/admin/administrators', label: t('administrators', { ns: 'admin' }) },
-        { to: '/admin/m2', label: t('m2_management', { ns: 'admin' }) },
-        { to: '/admin/settings', label: t('system_settings', { ns: 'admin' }) },
+        { to: '/master-gm', label: 'Usuarios & Módulos' },
+        { to: '/master-gm/admins', label: 'Administradores' },
+        { to: '/master-gm/accesos', label: 'Registros de Acceso' },
       ]} />
     </>
   )
 }
 
-function NavAdminCuenta({ t, bodegas }) {
+function NavAdmin({ t, bodegas }) {
   const navItems = [
-    { to: '/admin-cuenta/usuarios', label: t('usuarios', { ns: 'nav' }) },
-    { to: '/admin-cuenta/operaciones', label: 'Operaciones' },
-    { to: '/admin-cuenta/bodegas', label: t('bodegas', { ns: 'nav' }) },
+    { to: '/admin/bodegas', label: 'Bodegas & m²' },
+    { to: '/admin/usuarios', label: 'Usuarios' },
+    { to: '/admin/inventario', label: 'Inventario' },
+    { to: '/admin/pedidos', label: 'Pedidos' },
+    { to: '/admin/ingresos', label: 'Ingresos' },
+    { to: '/admin/reportes', label: 'Reportes' },
   ]
 
   return (
@@ -50,7 +52,7 @@ function NavAdminCuenta({ t, bodegas }) {
       {bodegas.length > 1 && (
         <>
           <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-            {t('bodegas', { ns: 'nav' })}
+            Bodega Actual
           </p>
           <div className="px-3 mb-3">
             <select className="w-full px-2 py-1 text-sm border border-gray-300 rounded">
@@ -63,7 +65,7 @@ function NavAdminCuenta({ t, bodegas }) {
         </>
       )}
       <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        {t('title', { ns: 'admin' })}
+        Panel de Admin
       </p>
       <NavSection items={navItems} />
     </>
@@ -72,27 +74,26 @@ function NavAdminCuenta({ t, bodegas }) {
 
 function NavOperador({ t }) {
   const navItems = [
-    { to: '/operador', label: t('operador', { ns: 'nav' }) },
-    { to: '/operador/recepcion', label: t('recepcion', { ns: 'nav' }) },
-    { to: '/operador/usuarios', label: t('usuarios', { ns: 'nav' }) },
-    { to: '/operador/reportes', label: t('reportes', { ns: 'nav' }) },
+    { to: '/operador', label: 'Panel Operativo' },
+    { to: '/operador/recepcion', label: 'Recepción' },
+    { to: '/operador/usuarios', label: 'Usuarios (Vista)' },
+    { to: '/operador/reportes', label: 'Reportes' },
+    { to: '/operador/inventario', label: 'Inventario Compartido' },
+    { to: '/operador/pedidos', label: 'Pedidos Compartidos' },
   ]
 
   return (
     <>
       <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        {t('operador', { ns: 'nav' })}
+        Panel Operador
       </p>
       <NavSection items={navItems} />
       <div className="my-3 border-t border-gray-100" />
       <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        {t('dashboard', { ns: 'nav' })}
+        Perfil
       </p>
       <NavSection items={[
-        { to: '/inventario', label: t('inventario', { ns: 'nav' }) },
-        { to: '/pedidos', label: t('pedidos', { ns: 'nav' }) },
-        { to: '/ingresos', label: t('ingresos', { ns: 'nav' }) },
-        { to: '/perfil', label: t('perfil', { ns: 'nav' }) },
+        { to: '/perfil', label: 'Mi Perfil' },
       ]} />
     </>
   )
@@ -140,8 +141,8 @@ export default function AppShell() {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {role === 'administrador_gm' && <NavGM t={t} />}
-          {role === 'administrador_cuenta' && <NavAdminCuenta t={t} bodegas={bodegas} />}
+          {role === 'administrador_gm' && <NavMasterGM t={t} />}
+          {role === 'administrador_cuenta' && <NavAdmin t={t} bodegas={bodegas} />}
           {role === 'operador' && <NavOperador t={t} />}
           {role === 'cliente' && <NavCliente t={t} />}
         </nav>

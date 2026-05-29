@@ -17,30 +17,30 @@ export default function ProtectedRoute({ requiredRol }) {
   if (requiredRol) {
     const rol = perfil?.rol
 
-    // administrador_gm has access to everything
+    // Master GM has access to everything
     if (rol === 'administrador_gm') {
       return <Outlet />
     }
 
-    // administrador_cuenta can access own routes and basic routes
+    // Admin can access own routes and basic routes
     if (requiredRol === 'administrador_cuenta') {
       if (rol === 'administrador_cuenta') {
         return <Outlet />
       }
-      return <Navigate to="/inventario" replace />
+      return <Navigate to="/dashboard" replace />
     }
 
-    // operador can access operador routes and basic routes
+    // Operador can access operador routes
     if (requiredRol === 'operador') {
       if (rol === 'operador' || rol === 'administrador_gm' || rol === 'administrador_cuenta') {
         return <Outlet />
       }
-      return <Navigate to="/inventario" replace />
+      return <Navigate to="/dashboard" replace />
     }
 
-    // Fallback: user must match the required role
+    // Cliente - basic access
     if (rol !== requiredRol) {
-      return <Navigate to="/inventario" replace />
+      return <Navigate to="/dashboard" replace />
     }
   }
 

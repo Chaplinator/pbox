@@ -29,8 +29,8 @@ const Reportes = lazy(() => import('@/pages/operador/Reportes'))
 
 // Admin pages - load on demand
 const SuperAdmin = lazy(() => import('@/pages/admin/SuperAdmin'))
-const AdminGM = lazy(() => import('@/pages/admin/AdminGM'))
-const AdminCuenta = lazy(() => import('@/pages/admin/AdminCuenta'))
+const MasterGM = lazy(() => import('@/pages/admin/MasterGM'))
+const Admin = lazy(() => import('@/pages/admin/Admin'))
 
 export default function App() {
   return (
@@ -69,22 +69,25 @@ export default function App() {
             </Route>
           </Route>
 
-          {/* Rutas protegidas — administrador_gm */}
+          {/* Rutas protegidas — Master GM (administrador_gm) */}
           <Route element={<ProtectedRoute requiredRol="administrador_gm" />}>
             <Route element={<AppShell />}>
-              <Route path="/admin" element={<Suspense fallback={<LoadingSpinner />}><AdminGM /></Suspense>} />
-              <Route path="/admin/administrators" element={<Suspense fallback={<LoadingSpinner />}><AdminGM /></Suspense>} />
-              <Route path="/admin/m2" element={<Suspense fallback={<LoadingSpinner />}><AdminGM /></Suspense>} />
-              <Route path="/admin/settings" element={<Suspense fallback={<LoadingSpinner />}><AdminGM /></Suspense>} />
+              <Route path="/master-gm" element={<Suspense fallback={<LoadingSpinner />}><MasterGM /></Suspense>} />
+              <Route path="/master-gm/admins" element={<Suspense fallback={<LoadingSpinner />}><MasterGM /></Suspense>} />
+              <Route path="/master-gm/accesos" element={<Suspense fallback={<LoadingSpinner />}><MasterGM /></Suspense>} />
             </Route>
           </Route>
 
-          {/* Rutas protegidas — administrador_cuenta */}
+          {/* Rutas protegidas — Admin (administrador_cuenta) */}
           <Route element={<ProtectedRoute requiredRol="administrador_cuenta" />}>
             <Route element={<AppShell />}>
-              <Route path="/admin-cuenta/usuarios" element={<Suspense fallback={<LoadingSpinner />}><AdminCuenta /></Suspense>} />
-              <Route path="/admin-cuenta/operaciones" element={<Suspense fallback={<LoadingSpinner />}><AdminCuenta /></Suspense>} />
-              <Route path="/admin-cuenta/bodegas" element={<Suspense fallback={<LoadingSpinner />}><AdminCuenta /></Suspense>} />
+              <Route path="/admin" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
+              <Route path="/admin/bodegas" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
+              <Route path="/admin/usuarios" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
+              <Route path="/admin/inventario" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
+              <Route path="/admin/pedidos" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
+              <Route path="/admin/ingresos" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
+              <Route path="/admin/reportes" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
             </Route>
           </Route>
 
