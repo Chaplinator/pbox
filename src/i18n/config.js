@@ -10,7 +10,7 @@ i18next
   .init({
     fallbackLng: 'es',
     defaultNS: 'common',
-    ns: ['common', 'auth', 'nav', 'inventory', 'orders', 'users', 'forms', 'errors', 'admin', 'perfil'],
+    ns: ['common', 'auth', 'nav', 'inventory', 'orders', 'users', 'forms', 'errors', 'admin', 'perfil', 'master_gm'],
     interpolation: {
       escapeValue: false,
     },
@@ -30,6 +30,7 @@ i18next
         errors: en.errors,
         admin: en.admin,
         perfil: en.perfil,
+        master_gm: en.master_gm,
       },
       es: {
         common: es.common,
@@ -42,6 +43,7 @@ i18next
         errors: es.errors,
         admin: es.admin,
         perfil: es.perfil,
+        master_gm: es.master_gm,
       },
     },
   })

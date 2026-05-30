@@ -5,6 +5,24 @@ function descargar(wb, nombre) {
   XLSX.writeFile(wb, `${nombre}_${fecha}.xlsx`)
 }
 
+// Exporta un arreglo de objetos ya etiquetados (clave = encabezado de columna).
+export function exportarResumen(filas, nombreArchivo = 'resumen', hoja = 'Resumen') {
+  const ws = XLSX.utils.json_to_sheet(filas)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, hoja)
+  descargar(wb, nombreArchivo)
+}
+
+// Exporta un libro con múltiples hojas. `sheets` = { 'NombreHoja': [filas...] }
+export function exportarLibro(sheets, nombreArchivo = 'respaldo') {
+  const wb = XLSX.utils.book_new()
+  for (const [nombre, filas] of Object.entries(sheets)) {
+    const ws = XLSX.utils.json_to_sheet(filas && filas.length ? filas : [{ '(sin datos)': '' }])
+    XLSX.utils.book_append_sheet(wb, ws, nombre.slice(0, 31))
+  }
+  descargar(wb, nombreArchivo)
+}
+
 export function exportarInventario(productos, rotacion = {}) {
   const filas = productos.map(p => ({
     'SKU':            p.sku,

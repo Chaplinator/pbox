@@ -29,7 +29,8 @@ export default function Login() {
     if (error) {
       setError(t('invalid_credentials', { ns: 'auth' }))
     } else {
-      navigate('/dashboard')
+      // El redirector por rol (RoleHome) decide la vista inicial
+      navigate('/')
     }
   }
 

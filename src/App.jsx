@@ -1,9 +1,22 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
-import { AuthProvider } from '@/context/AuthContext'
+import { AuthProvider, useAuth } from '@/context/AuthContext'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
 import AppShell from '@/components/layout/AppShell'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+
+// Redirige a la vista inicial según el rol
+function RoleHome() {
+  const { perfil, loading } = useAuth()
+  // Esperar a que el perfil esté cargado, no solo la sesión —
+  // si no, rol=undefined y caería al default (/dashboard de cliente).
+  if (loading || !perfil) return <LoadingSpinner />
+  const rol = perfil?.rol
+  if (rol === 'administrador_gm') return <Navigate to="/master-gm" replace />
+  if (rol === 'administrador_cuenta') return <Navigate to="/admin/dashboard" replace />
+  if (rol === 'operador') return <Navigate to="/operador" replace />
+  return <Navigate to="/dashboard" replace />
+}
 
 // Public pages - load on demand
 const Login = lazy(() => import('@/pages/auth/Login'))
@@ -44,6 +57,11 @@ export default function App() {
           <Route path="/track" element={<Suspense fallback={<LoadingSpinner />}><Track /></Suspense>} />
           <Route path="/track/:numero" element={<Suspense fallback={<LoadingSpinner />}><Track /></Suspense>} />
 
+          {/* Redirector por rol */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<RoleHome />} />
+          </Route>
+
           {/* Rutas protegidas — cualquier usuario autenticado */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell />}>
@@ -73,6 +91,7 @@ export default function App() {
           <Route element={<ProtectedRoute requiredRol="administrador_gm" />}>
             <Route element={<AppShell />}>
               <Route path="/master-gm" element={<Suspense fallback={<LoadingSpinner />}><MasterGM /></Suspense>} />
+              <Route path="/master-gm/usuarios" element={<Suspense fallback={<LoadingSpinner />}><MasterGM /></Suspense>} />
               <Route path="/master-gm/admins" element={<Suspense fallback={<LoadingSpinner />}><MasterGM /></Suspense>} />
               <Route path="/master-gm/accesos" element={<Suspense fallback={<LoadingSpinner />}><MasterGM /></Suspense>} />
             </Route>
@@ -82,6 +101,7 @@ export default function App() {
           <Route element={<ProtectedRoute requiredRol="administrador_cuenta" />}>
             <Route element={<AppShell />}>
               <Route path="/admin" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
+              <Route path="/admin/dashboard" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
               <Route path="/admin/bodegas" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
               <Route path="/admin/usuarios" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
               <Route path="/admin/inventario" element={<Suspense fallback={<LoadingSpinner />}><Admin /></Suspense>} />
@@ -91,8 +111,8 @@ export default function App() {
             </Route>
           </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/inventario" replace />} />
+          {/* Fallback — el redirector por rol decide */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

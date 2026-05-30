@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useTranslation } from 'react-i18next'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import { useEffect } from 'react'
 
 function NavSection({ items }) {
   return items.map(({ to, label }) => (
@@ -26,12 +27,13 @@ function NavMasterGM({ t }) {
   return (
     <>
       <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        Gestión de Permisos
+        {t('permissions', { ns: 'admin' })}
       </p>
       <NavSection items={[
-        { to: '/master-gm', label: 'Usuarios & Módulos' },
-        { to: '/master-gm/admins', label: 'Administradores' },
-        { to: '/master-gm/accesos', label: 'Registros de Acceso' },
+        { to: '/master-gm', label: t('dashboard', { ns: 'master_gm' }) },
+        { to: '/master-gm/usuarios', label: t('usuarios', { ns: 'master_gm' }) },
+        { to: '/master-gm/admins', label: t('admins', { ns: 'master_gm' }) },
+        { to: '/master-gm/accesos', label: t('accesos', { ns: 'master_gm' }) },
       ]} />
     </>
   )
@@ -39,6 +41,7 @@ function NavMasterGM({ t }) {
 
 function NavAdmin({ t, bodegas }) {
   const navItems = [
+    { to: '/admin/dashboard', label: 'Dashboard' },
     { to: '/admin/bodegas', label: 'Bodegas & m²' },
     { to: '/admin/usuarios', label: 'Usuarios' },
     { to: '/admin/inventario', label: 'Inventario' },
@@ -118,6 +121,13 @@ export default function AppShell() {
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
 
+  // Sincronizar idioma de perfil con i18n
+  useEffect(() => {
+    if (perfil?.idioma && perfil.idioma !== i18n.language) {
+      i18n.changeLanguage(perfil.idioma)
+    }
+  }, [perfil?.idioma, i18n])
+
   const role = perfil?.rol
 
   async function handleSignOut() {
@@ -127,11 +137,9 @@ export default function AppShell() {
 
   async function handleLanguageChange(e) {
     const newLanguage = e.target.value
-    if (newLanguage === i18n.language) return
-    const success = await changeLanguage(newLanguage)
-    if (success) {
-      i18n.changeLanguage(newLanguage)
-    }
+    if (newLanguage === perfil?.idioma) return
+    // changeLanguage already calls i18n.changeLanguage internally
+    await changeLanguage(newLanguage)
   }
 
   return (
@@ -159,7 +167,7 @@ export default function AppShell() {
                 {t('language', { ns: 'common' })}
               </label>
               <select
-                value={i18n.language}
+                value={perfil.idioma || i18n.language}
                 onChange={handleLanguageChange}
                 className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white"
               >
